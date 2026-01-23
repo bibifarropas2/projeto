@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#f0f4ff"/>
+  <circle cx="100" cy="100" r="60" fill="#6366f1" opacity="0.2"/>
+  <circle cx="100" cy="100" r="50" fill="none" stroke="#6366f1" stroke-width="8"/>
+  <path d="M 100 65 L 115 85 L 130 85 L 120 95 L 125 115 L 100 100 L 75 115 L 80 95 L 70 85 L 85 85 Z" fill="#8b5cf6"/>
+  <text x="100" y="140" text-anchor="middle" font-size="20" font-weight="bold" fill="#6366f1">ECO</text>
+</svg>

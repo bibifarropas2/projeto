@@ -10,69 +10,118 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// ==== SALDO TOTAL ====
-// Total de receitas
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE user_id = :user_id AND tipo = 'receita'");
-$stmt->execute(['user_id' => $user_id]);
-$total_receitas = $stmt->fetchColumn() ?? 0;
+// Meses em português
+$meses = [
+    1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
+    5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
+    9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+];
 
-// Total de despesas
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE user_id = :user_id AND tipo = 'despesa'");
-$stmt->execute(['user_id' => $user_id]);
-$total_despesas = $stmt->fetchColumn() ?? 0;
-
-// Saldo atual
-$saldo_atual = $total_receitas - $total_despesas;
-
-// ==== RESUMO DO MÊS ==== 
 $current_month = date('m');
 $current_year = date('Y');
+$mes_atual = $meses[(int)$current_month];
 
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE user_id = :user_id AND tipo = 'receita' AND MONTH(data) = :month AND YEAR(data) = :year");
-$stmt->execute([
-    'user_id' => $user_id,
-    'month' => $current_month,
-    'year' => $current_year
-]);
-$receitas_mes = $stmt->fetchColumn() ?? 0;
+// ==== SALDO TOTAL ====
+try {
+    $stmt = $pdo->prepare("SELECT SUM(valor) as total FROM transacoes WHERE user_id = :user_id AND tipo = 'receita'");
+    $stmt->execute(['user_id' => $user_id]);
+    $total_receitas = $stmt->fetch()['total'] ?? 0;
 
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE user_id = :user_id AND tipo = 'despesa' AND MONTH(data) = :month AND YEAR(data) = :year");
-$stmt->execute([
-    'user_id' => $user_id,
-    'month' => $current_month,
-    'year' => $current_year
-]);
-$despesas_mes = $stmt->fetchColumn() ?? 0;
+    $stmt = $pdo->prepare("SELECT SUM(valor) as total FROM transacoes WHERE user_id = :user_id AND tipo = 'despesa'");
+    $stmt->execute(['user_id' => $user_id]);
+    $total_despesas = $stmt->fetch()['total'] ?? 0;
 
-$saldo_mes = $receitas_mes - $despesas_mes;
+    $saldo_atual = $total_receitas - $total_despesas;
+} catch (PDOException $e) {
+    $total_receitas = 0;
+    $total_despesas = 0;
+    $saldo_atual = 0;
+}
+
+// ==== RESUMO DO MÊS ====
+try {
+    $stmt = $pdo->prepare("
+        SELECT SUM(valor) as total FROM transacoes 
+        WHERE user_id = :user_id AND tipo = 'receita' 
+        AND MONTH(data) = :month AND YEAR(data) = :year
+    ");
+    $stmt->execute([
+        'user_id' => $user_id,
+        'month' => $current_month,
+        'year' => $current_year
+    ]);
+    $receitas_mes = $stmt->fetch()['total'] ?? 0;
+
+    $stmt = $pdo->prepare("
+        SELECT SUM(valor) as total FROM transacoes 
+        WHERE user_id = :user_id AND tipo = 'despesa' 
+        AND MONTH(data) = :month AND YEAR(data) = :year
+    ");
+    $stmt->execute([
+        'user_id' => $user_id,
+        'month' => $current_month,
+        'year' => $current_year
+    ]);
+    $despesas_mes = $stmt->fetch()['total'] ?? 0;
+
+    $saldo_mes = $receitas_mes - $despesas_mes;
+} catch (PDOException $e) {
+    $receitas_mes = 0;
+    $despesas_mes = 0;
+    $saldo_mes = 0;
+}
 
 // ==== ÚLTIMAS TRANSAÇÕES ====
-$stmt = $pdo->prepare("SELECT * FROM transacoes WHERE user_id = :user_id ORDER BY data DESC LIMIT 10");
-$stmt->execute(['user_id' => $user_id]);
-$transacoes = $stmt->fetchAll();
+try {
+    $stmt = $pdo->prepare("SELECT * FROM transacoes WHERE user_id = :user_id ORDER BY data DESC LIMIT 8");
+    $stmt->execute(['user_id' => $user_id]);
+    $transacoes = $stmt->fetchAll();
+    $count_transacoes = count($transacoes);
+} catch (PDOException $e) {
+    $transacoes = [];
+    $count_transacoes = 0;
+}
 
-?><!DOCTYPE html>
-<html lang="pt">
+// ==== DESPESAS POR CATEGORIA (últimos 30 dias) ====
+try {
+    $stmt = $pdo->prepare("
+        SELECT categoria, SUM(valor) as total 
+        FROM transacoes 
+        WHERE user_id = :user_id AND tipo = 'despesa' AND data >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY categoria
+        ORDER BY total DESC
+        LIMIT 5
+    ");
+    $stmt->execute(['user_id' => $user_id]);
+    $despesas_categoria = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $despesas_categoria = [];
+}
+?>
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Financeiro</title>
+    <title>Dashboard - Minhas Economias</title>
     
     <style>
         :root {
-            --primary: #2563eb;         /* azul principal */
-            --primary-dark: #1d4ed8;
-            --success: #10b981;         /* verde receitas */
-            --danger: #ef4444;          /* vermelho despesas */
-            --warning: #f59e0b;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-600: #4b5563;
-            --gray-800: #1f2937;
-            --radius: 12px;
-            --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-            --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --primary:      #00C853;
+            --primary-dark: #00A840;
+            --secondary:    #FFD600;
+            --success:      #10b981;
+            --danger:       #ef4444;
+            --warning:      #f59e0b;
+            --info:         #3b82f6;
+            --gray-50:      #fafafa;
+            --gray-100:     #f5f5f5;
+            --gray-200:     #e0e0e0;
+            --gray-600:     #616161;
+            --gray-800:     #212121;
+            --radius:       10px;
+            --shadow-sm:    0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md:    0 8px 20px rgba(0,0,0,0.12);
         }
 
         * {
@@ -82,7 +131,7 @@ $transacoes = $stmt->fetchAll();
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background: var(--gray-100);
             color: var(--gray-800);
             min-height: 100vh;
@@ -92,7 +141,7 @@ $transacoes = $stmt->fetchAll();
         header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 1.2rem 2rem;
+            padding: 1.5rem 2rem;
             box-shadow: var(--shadow-md);
             position: sticky;
             top: 0;
@@ -106,12 +155,26 @@ $transacoes = $stmt->fetchAll();
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
-        header h1 {
-            font-size: 1.6rem;
+        .header-left h1 {
+            font-size: 1.8rem;
             font-weight: 600;
+            margin: 0;
+        }
+
+        .header-left p {
+            font-size: 0.9rem;
+            opacity: 0.95;
+            margin-top: 0.2rem;
+        }
+
+        nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         nav a {
@@ -119,30 +182,39 @@ $transacoes = $stmt->fetchAll();
             text-decoration: none;
             font-weight: 500;
             padding: 0.6rem 1rem;
-            border-radius: 8px;
+            border-radius: 6px;
             transition: all 0.2s;
+            font-size: 0.95rem;
         }
 
         nav a:hover {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.2);
+        }
+
+        nav a.btn-logout {
+            background: rgba(255, 214, 0, 0.2);
+        }
+
+        nav a.btn-logout:hover {
+            background: rgba(255, 214, 0, 0.3);
         }
 
         .container {
             max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1.5rem;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
         }
 
-        h2 {
-            font-size: 1.5rem;
+        .section-title {
+            font-size: 1.4rem;
             font-weight: 600;
             color: var(--gray-800);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.2rem;
         }
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2.5rem;
         }
@@ -152,61 +224,134 @@ $transacoes = $stmt->fetchAll();
             border-radius: var(--radius);
             padding: 1.8rem;
             box-shadow: var(--shadow-sm);
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .card:hover {
-            transform: translateY(-6px);
+            transform: translateY(-4px);
             box-shadow: var(--shadow-md);
         }
 
-        .card h3 {
-            font-size: 1.05rem;
-            color: var(--gray-600);
-            margin-bottom: 0.8rem;
-            font-weight: 500;
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
         }
 
-        .card p {
-            font-size: 2rem;
+        .card.balance::before { background: var(--primary); }
+        .card.income::before { background: var(--success); }
+        .card.expense::before { background: var(--danger); }
+        .card.monthly::before { background: var(--info); }
+
+        .card-label {
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+
+        .card-value {
+            font-size: 2.2rem;
             font-weight: 700;
             line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: var(--gray-600);
         }
 
         .positive { color: var(--success); }
         .negative { color: var(--danger); }
-        .neutral   { color: var(--primary); }
 
-        .transactions-section {
+        /* QUICK ACTIONS */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .action-btn {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius);
+            padding: 1.2rem;
+            text-align: center;
+            text-decoration: none;
+            color: var(--gray-800);
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .action-btn-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* CONTENT GRID */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .transactions-section, .categories-section {
             background: white;
             border-radius: var(--radius);
             box-shadow: var(--shadow-sm);
             overflow: hidden;
         }
 
-        .transactions-section h2 {
+        .section-header {
             padding: 1.5rem 2rem;
             border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header h2 {
             margin: 0;
+            font-size: 1.2rem;
+            color: var(--gray-800);
+        }
+
+        .view-all {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .view-all:hover {
+            text-decoration: underline;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 1.1rem 2rem;
-            text-align: left;
-        }
-
-        th {
-            background: var(--gray-50);
-            font-weight: 600;
-            color: var(--gray-600);
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
         }
 
         tr {
@@ -218,8 +363,44 @@ $transacoes = $stmt->fetchAll();
             background: var(--gray-50);
         }
 
-        .tipo-receita { color: var(--success); font-weight: 600; }
-        .tipo-despesa { color: var(--danger);  font-weight: 600; }
+        tr:last-child {
+            border-bottom: none;
+        }
+
+        th {
+            background: var(--gray-50);
+            padding: 1rem 2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-600);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem 2rem;
+        }
+
+        .tipo-receita { 
+            color: var(--success); 
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+
+        .tipo-despesa { 
+            color: var(--danger); 
+            font-weight: 600;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
 
         .valor {
             font-weight: 600;
@@ -228,7 +409,43 @@ $transacoes = $stmt->fetchAll();
 
         .data {
             color: var(--gray-600);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+        }
+
+        .no-transactions {
+            padding: 3rem 2rem;
+            text-align: center;
+            color: var(--gray-600);
+        }
+
+        /* CATEGORIES */
+        .category-item {
+            padding: 1.2rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-item:last-child {
+            border-bottom: none;
+        }
+
+        .category-name {
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        .category-amount {
+            font-weight: 600;
+            color: var(--danger);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 768px) {
@@ -236,21 +453,62 @@ $transacoes = $stmt->fetchAll();
                 flex-direction: column;
                 align-items: flex-start;
             }
-            nav {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.5rem;
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
+
+            .card { 
+                padding: 1.2rem; 
+            }
+
+            .card-value { 
+                font-size: 1.8rem; 
+            }
+            
+            nav {
+                gap: 0.3rem;
+            }
+
             nav a {
-                padding: 0.5rem 0.9rem;
-                font-size: 0.95rem;
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .section-header {
+                padding: 1rem 1.2rem;
             }
         }
 
         @media (max-width: 600px) {
-            .container { padding: 0 1rem; }
-            th, td { padding: 1rem 1.2rem; }
-            .card p { font-size: 1.7rem; }
+            .container {
+                padding: 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .action-btn-icon {
+                font-size: 1.5rem;
+            }
+
+            th, td {
+                padding: 0.7rem 0.8rem;
+            }
+
+            .card-value {
+                font-size: 1.6rem;
+            }
         }
     </style>
 </head>
@@ -258,72 +516,137 @@ $transacoes = $stmt->fetchAll();
 
 <header>
     <div class="header-content">
-        <h1>Olá, <?= htmlspecialchars($_SESSION['username']) ?></h1>
+        <div class="header-left">
+            <h1>💰 Minhas Economias</h1>
+            <p>Bem-vindo, <strong><?= htmlspecialchars($_SESSION['username']) ?></strong></p>
+        </div>
         <nav>
-            <a href="dashboard.php">Dashboard</a>
-            <a href="add_transacao.php">+ Transação</a>
-            <a href="fundos.php">Fundos</a>
-            <a href="relatorios.php">Relatórios</a>
-            <a href="logout.php">Sair</a>
+            <a href="dashboard.php">📊 Dashboard</a>
+            <a href="adicionar_receitas.php">➕ Receita</a>
+            <a href="adicionar_despesa.php">➖ Despesa</a>
+            <a href="logout.php" class="btn-logout">🚪 Sair</a>
         </nav>
     </div>
 </header>
 
 <div class="container">
 
-    <h2>Resumo Financeiro</h2>
+    <!-- CARDS DE ESTATÍSTICAS -->
     <div class="stats-grid">
-        <div class="card">
-            <h3>Saldo Atual</h3>
-            <p class="<?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
+        <div class="card balance">
+            <div class="card-label">Saldo Total</div>
+            <div class="card-value <?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
                 <?= number_format($saldo_atual, 2, ',', '.') ?> €
-            </p>
+            </div>
+            <div class="card-subtitle">Receitas - Despesas</div>
         </div>
 
-        <div class="card">
-            <h3>Total Entradas</h3>
-            <p class="positive"><?= number_format($total_receitas, 2, ',', '.') ?> €</p>
+        <div class="card income">
+            <div class="card-label">Total de Entradas</div>
+            <div class="card-value positive">
+                <?= number_format($total_receitas, 2, ',', '.') ?> €
+            </div>
+            <div class="card-subtitle">Desde o início</div>
         </div>
 
-        <div class="card">
-            <h3>Total Saídas</h3>
-            <p class="negative"><?= number_format($total_despesas, 2, ',', '.') ?> €</p>
+        <div class="card expense">
+            <div class="card-label">Total de Saídas</div>
+            <div class="card-value negative">
+                <?= number_format($total_despesas, 2, ',', '.') ?> €
+            </div>
+            <div class="card-subtitle">Todas as despesas</div>
         </div>
 
-        <div class="card">
-            <h3>Saldo de <?= date('F Y') ?></h3>
-            <p class="<?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
+        <div class="card monthly">
+            <div class="card-label">Saldo de <?= $mes_atual ?></div>
+            <div class="card-value <?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
                 <?= number_format($saldo_mes, 2, ',', '.') ?> €
-            </p>
+            </div>
+            <div class="card-subtitle">Este mês</div>
         </div>
     </div>
 
-    <div class="transactions-section">
-        <h2>Últimas 10 Transações</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th class="valor">Valor</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach($transacoes as $t): ?>
-                    <tr>
-                        <td class="data"><?= htmlspecialchars($t['data']) ?></td>
-                        <td><?= htmlspecialchars($t['descricao']) ?></td>
-                        <td class="<?= $t['tipo'] === 'receita' ? 'tipo-receita' : 'tipo-despesa' ?>">
-                            <?= ucfirst($t['tipo']) ?>
-                        </td>
-                        <td class="valor <?= $t['tipo'] === 'receita' ? 'positive' : 'negative' ?>">
-                            <?= number_format($t['valor'], 2, ',', '.') ?> €
-                        </td>
-                    </tr>
+    <!-- AÇÕES RÁPIDAS -->
+    <h2 class="section-title">Ações Rápidas</h2>
+    <div class="quick-actions">
+        <a href="adicionar_receitas.php" class="action-btn">
+            <span class="action-btn-icon">💵</span>
+            Adicionar Receita
+        </a>
+        <a href="adicionar_despesa.php" class="action-btn">
+            <span class="action-btn-icon">💸</span>
+            Adicionar Despesa
+        </a>
+        <a href="#" class="action-btn">
+            <span class="action-btn-icon">📈</span>
+            Ver Relatórios
+        </a>
+        <a href="#" class="action-btn">
+            <span class="action-btn-icon">⚙️</span>
+            Definições
+        </a>
+    </div>
+
+    <!-- TRANSAÇÕES E CATEGORIAS -->
+    <h2 class="section-title">Últimas Movimentações</h2>
+    <div class="content-grid">
+        <div class="transactions-section">
+            <div class="section-header">
+                <h2>Transações Recentes</h2>
+                <a href="#" class="view-all">Ver Todas →</a>
+            </div>
+            <?php if ($count_transacoes > 0): ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Tipo</th>
+                            <th class="valor">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($transacoes as $t): ?>
+                            <tr>
+                                <td class="data"><?= date('d/m/Y', strtotime($t['data'])) ?></td>
+                                <td><?= htmlspecialchars(substr($t['descricao'], 0, 30)) ?></td>
+                                <td>
+                                    <span class="<?= $t['tipo'] === 'receita' ? 'tipo-receita' : 'tipo-despesa' ?>">
+                                        <?= ucfirst($t['tipo']) ?>
+                                    </span>
+                                </td>
+                                <td class="valor <?= $t['tipo'] === 'receita' ? 'positive' : 'negative' ?>">
+                                    <?= ($t['tipo'] === 'receita' ? '+' : '-') . number_format($t['valor'], 2, ',', '.') ?> €
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <div class="no-transactions">
+                    <p>📭 Nenhuma transação registrada ainda.</p>
+                    <p>Comece a adicionar receitas e despesas!</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="categories-section">
+            <div class="section-header">
+                <h2>Despesas por Categoria</h2>
+            </div>
+            <?php if (!empty($despesas_categoria)): ?>
+                <?php foreach($despesas_categoria as $cat): ?>
+                    <div class="category-item">
+                        <span class="category-name"><?= htmlspecialchars($cat['categoria']) ?></span>
+                        <span class="category-amount"><?= number_format($cat['total'], 2, ',', '.') ?> €</span>
+                    </div>
                 <?php endforeach; ?>
-            </tbody>
-        </table>
+            <?php else: ?>
+                <div style="padding: 2rem; text-align: center; color: var(--gray-600);">
+                    <p>📊 Sem dados de despesas</p>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 
 </div>

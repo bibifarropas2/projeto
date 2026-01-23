@@ -35,26 +35,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Login - Minhas Economias</title>
     
     <style>
         :root {
-            --primary:    #3b82f6;     /* azul principal vibrante */
-            --primary-dark: #2563eb;   /* hover / active */
-            --primary-light: #60a5fa;
-            --bg-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            --card-bg: #ffffff;
-            --text-dark: #0f172a;
-            --text-muted: #475569;
-            --border: #e2e8f0;
-            --error: #ef4444;
-            --error-bg: #fef2f2;
-            --radius: 16px;
-            --shadow: 0 15px 35px rgba(30, 58, 138, 0.18);
+            --primary:      #00C853;
+            --primary-dark: #00A840;
+            --secondary:    #FFD600;
+            --error:        #ef4444;
+            --error-bg:     #fef2f2;
+            --text-dark:    #1a1a1a;
+            --text-muted:   #666;
+            --border:       #e0e0e0;
+            --bg-light:     #f5f5f5;
+            --radius:       10px;
         }
 
         * {
@@ -65,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg-gradient);
+            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -74,161 +72,252 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--text-dark);
         }
 
-        .login-container {
-            background: var(--card-bg);
+        .login-wrapper {
+            display: flex;
             width: 100%;
-            max-width: 440px;
+            max-width: 1000px;
+            background: white;
             border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.08);
-            animation: fadeInUp 0.7s ease-out;
+            animation: slideUp 0.6s ease-out;
         }
 
-        .login-header {
-            background: var(--primary);
+        .login-graphic {
+            flex: 1;
+            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
             color: white;
-            padding: 2.4rem 2rem;
+            padding: 3rem 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
         }
 
-        .login-header h2 {
-            font-size: 2rem;
+        .login-graphic h2 {
+            font-size: 2.2rem;
             font-weight: 700;
-            margin: 0;
-            letter-spacing: -0.5px;
+            margin-bottom: 1rem;
+            line-height: 1.3;
         }
 
-        .login-body {
-            padding: 2.8rem 2.4rem 2.4rem;
+        .login-graphic p {
+            font-size: 1.05rem;
+            opacity: 0.95;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .graphic-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-form-section {
+            flex: 1;
+            padding: 3.5rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-form-section h3 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+
+        .login-form-section > p {
+            color: var(--text-muted);
+            margin-bottom: 1.8rem;
+            font-size: 0.95rem;
         }
 
         .error-message {
             background: var(--error-bg);
             color: var(--error);
-            padding: 14px 18px;
-            border-radius: 10px;
-            margin-bottom: 1.8rem;
-            font-size: 0.96rem;
-            border-left: 5px solid var(--error);
-            line-height: 1.5;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            border-left: 4px solid var(--error);
+            line-height: 1.4;
         }
 
         .form-group {
-            margin-bottom: 1.9rem;
+            margin-bottom: 1.6rem;
         }
 
         label {
             display: block;
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.5rem;
             font-weight: 600;
-            color: var(--text-muted);
-            font-size: 0.97rem;
+            color: var(--text-dark);
+            font-size: 0.9rem;
         }
 
         input {
             width: 100%;
-            padding: 15px 18px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 1.03rem;
-            background: #f8fafc;
-            transition: all 0.25s ease;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg-light);
+            transition: all 0.3s ease;
+            font-family: inherit;
         }
 
         input:focus {
             outline: none;
             border-color: var(--primary);
             background: white;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+            box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1);
         }
 
-        .btn {
-            display: block;
+        input::placeholder {
+            color: #999;
+        }
+
+        .btn-login {
             width: 100%;
-            padding: 15px;
-            background: var(--primary);
+            padding: 13px;
+            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 1.08rem;
+            border-radius: 8px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-top: 1.4rem;
+            margin-top: 0.5rem;
         }
 
-        .btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.35);
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 200, 83, 0.3);
         }
 
-        .register-link {
-            text-align: center;
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .register-section {
             margin-top: 2rem;
-            color: var(--text-muted);
-            font-size: 0.98rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
         }
 
-        .register-link a {
+        .register-section p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .register-section a {
             color: var(--primary);
             font-weight: 600;
             text-decoration: none;
-            transition: color 0.2s;
+            transition: all 0.2s;
         }
 
-        .register-link a:hover {
+        .register-section a:hover {
             color: var(--primary-dark);
             text-decoration: underline;
         }
 
-        @keyframes fadeInUp {
-            from { 
-                opacity: 0; 
-                transform: translateY(30px); 
+        .back-to-home {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 8px 15px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .back-to-home:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
             }
-            to   { 
-                opacity: 1; 
-                transform: translateY(0); 
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        @media (max-width: 480px) {
-            .login-body {
-                padding: 2.2rem 1.8rem;
+        @media (max-width: 768px) {
+            .login-wrapper {
+                flex-direction: column;
             }
-            .login-header {
-                padding: 2rem 1.6rem;
+
+            .login-graphic {
+                padding: 2rem;
+            }
+
+            .login-graphic h2 {
+                font-size: 1.6rem;
+            }
+
+            .login-form-section {
+                padding: 2rem;
+            }
+
+            .back-to-home {
+                position: static;
+                display: inline-block;
+                margin-bottom: 1rem;
+                background: rgba(0, 200, 83, 0.1);
+                color: var(--primary);
+            }
+
+            .back-to-home:hover {
+                background: rgba(0, 200, 83, 0.2);
             }
         }
     </style>
 </head>
 <body>
 
-<div class="login-container">
-    <div class="login-header">
-        <h2>Entrar</h2>
+<a href="landing.php" class="back-to-home">← Voltar</a>
+
+<div class="login-wrapper">
+    <div class="login-graphic">
+        <div class="graphic-icon">💰</div>
+        <h2>Bem-vindo de volta!</h2>
+        <p>Aceda à sua conta e gerencie suas finanças de forma inteligente.</p>
     </div>
 
-    <div class="login-body">
+    <div class="login-form-section">
+        <h3>Fazer Login</h3>
+        <p>Insira suas credenciais para continuar</p>
 
         <?php if (!empty($error)): ?>
             <div class="error-message">
-                <?= htmlspecialchars($error) ?>
+                ⚠️ <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>
 
         <form method="POST">
             <div class="form-group">
-                <label for="username">Utilizador</label>
+                <label for="username">Nome de Utilizador</label>
                 <input 
                     type="text" 
                     id="username" 
                     name="username" 
-                    placeholder="Seu nome de utilizador"
+                    placeholder="exemplo: joao2024"
                     required 
                     autocomplete="username"
+                    autofocus
                 >
             </div>
 
@@ -244,13 +333,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 >
             </div>
 
-            <button type="submit" class="btn">Entrar</button>
+            <button type="submit" class="btn-login">Entrar na Conta</button>
         </form>
 
-        <div class="register-link">
-            Ainda não tens conta? <a href="registar.php">Criar conta</a>
+        <div class="register-section">
+            <p>Ainda não tens conta?</p>
+            <a href="registar.php">Criar conta gratuita</a>
         </div>
-
     </div>
 </div>
 
