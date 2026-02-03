@@ -60,19 +60,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Registar - Minhas Economias</title>
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
+
         :root {
-            --primary:      #00C853;
-            --primary-dark: #00A840;
-            --secondary:    #FFD600;
-            --error:        #ef4444;
-            --error-bg:     #fef2f2;
-            --success:      #10b981;
-            --success-bg:   #f0fdf4;
-            --text-dark:    #1a1a1a;
-            --text-muted:   #666;
-            --border:       #e0e0e0;
-            --bg-light:     #f5f5f5;
-            --radius:       10px;
+            --brand: #0f7a4d;
+            --brand-dark: #0c6c45;
+            --accent: #d6a21b;
+            --error: #b91c1c;
+            --error-bg: #fef2f2;
+            --success: #0f9b4d;
+            --success-bg: #f0fdf4;
+            --text-dark: #1f1a17;
+            --text-muted: #5b524a;
+            --border: #e7ddcf;
+            --bg-light: #f8f3ea;
+            --radius: 14px;
         }
 
         * {
@@ -82,8 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
+            font-family: 'Lexend', "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top, rgba(214, 162, 27, 0.16), transparent 45%),
+                        linear-gradient(135deg, #f8f3ea 0%, #f1e7d7 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -96,16 +99,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             width: 100%;
             max-width: 1000px;
-            background: white;
+            background: #fffdfa;
             border-radius: var(--radius);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 20px 60px rgba(31, 26, 23, 0.16);
             overflow: hidden;
             animation: slideUp 0.6s ease-out;
+            border: 1px solid var(--border);
         }
 
         .register-graphic {
             flex: 1;
-            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
+            background: linear-gradient(135deg, #0f7a4d 0%, #0c6c45 100%);
             color: white;
             padding: 3rem 2rem;
             display: flex;
@@ -120,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 700;
             margin-bottom: 1rem;
             line-height: 1.3;
+            font-family: 'Sora', 'Lexend', sans-serif;
         }
 
         .register-graphic p {
@@ -147,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 0.5rem;
             color: var(--text-dark);
             font-weight: 700;
+            font-family: 'Sora', 'Lexend', sans-serif;
         }
 
         .register-form-section > p {
@@ -201,9 +207,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         input:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: var(--brand);
             background: white;
-            box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1);
+            box-shadow: 0 0 0 3px rgba(15, 122, 77, 0.12);
         }
 
         input::placeholder {
@@ -219,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .btn-register {
             width: 100%;
             padding: 13px;
-            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
+            background: linear-gradient(135deg, #0f7a4d 0%, #0c6c45 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -232,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .btn-register:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 200, 83, 0.3);
+            box-shadow: 0 10px 25px rgba(15, 122, 77, 0.28);
         }
 
         .btn-register:active {
@@ -253,14 +259,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .login-section a {
-            color: var(--primary);
+            color: var(--brand);
             font-weight: 600;
             text-decoration: none;
             transition: all 0.2s;
         }
 
         .login-section a:hover {
-            color: var(--primary-dark);
+            color: var(--brand-dark);
             text-decoration: underline;
         }
 
@@ -268,16 +274,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             position: absolute;
             top: 20px;
             left: 20px;
-            color: white;
+            color: var(--brand);
             text-decoration: none;
             font-size: 0.9rem;
             padding: 8px 15px;
             border-radius: 6px;
             transition: all 0.2s;
+            background: rgba(15, 122, 77, 0.08);
         }
 
         .back-to-home:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(15, 122, 77, 0.15);
         }
 
         @keyframes slideUp {
@@ -312,12 +319,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 position: static;
                 display: inline-block;
                 margin-bottom: 1rem;
-                background: rgba(0, 200, 83, 0.1);
-                color: var(--primary);
+                background: rgba(15, 122, 77, 0.1);
+                color: var(--brand);
             }
 
             .back-to-home:hover {
-                background: rgba(0, 200, 83, 0.2);
+                background: rgba(15, 122, 77, 0.2);
             }
         }
     </style>
@@ -331,8 +338,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="graphic-icon">🎉</div>
         <h2>Bem-vindo!</h2>
         <p>Crie sua conta gratuita e comece a gerir suas finanças de forma inteligente.</p>
-    </div>
+</div>
 
+</body>
+</html>
     <div class="register-form-section">
         <h3>Criar Conta</h3>
         <p>Insira os dados para registar-se</p>

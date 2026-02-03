@@ -14,6 +14,20 @@ if(isset($_SESSION['user_id'])){
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minhas Economias - Gestão Financeira Simplificada</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@500;600;700;800&display=swap');
+
+        :root {
+            --brand: #0f7a4d;
+            --brand-2: #17a866;
+            --accent: #d6a21b;
+            --ink: #1f1a17;
+            --ink-soft: #4b433b;
+            --paper: #f8f3ea;
+            --card: #fffdfa;
+            --border: #e7ddcf;
+            --shadow: 0 14px 34px rgba(31, 26, 23, 0.16);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -21,20 +35,26 @@ if(isset($_SESSION['user_id'])){
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Lexend', "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: var(--ink);
+            background: var(--paper);
+        }
+
+        h1, h2, h3 {
+            font-family: 'Sora', 'Lexend', sans-serif;
+            letter-spacing: -0.02em;
         }
 
         /* HEADER / NAVBAR */
         header {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #0f7a4d 0%, #1d8c58 100%);
             color: white;
             padding: 20px 0;
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 10px 25px rgba(15, 122, 77, 0.25);
         }
 
         .container {
@@ -47,6 +67,7 @@ if(isset($_SESSION['user_id'])){
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 24px;
         }
 
         .logo {
@@ -57,8 +78,17 @@ if(isset($_SESSION['user_id'])){
 
         nav {
             display: flex;
-            gap: 30px;
+            gap: 20px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         nav a {
@@ -81,19 +111,22 @@ if(isset($_SESSION['user_id'])){
         .btn {
             padding: 10px 24px;
             border: none;
-            border-radius: 5px;
+            border-radius: 999px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             font-size: 14px;
         }
 
         .btn-download {
             background: white;
-            color: #6366f1;
+            color: var(--brand);
             border: 2px solid white;
+            box-shadow: 0 8px 18px rgba(255, 255, 255, 0.15);
         }
 
         .btn-download:hover {
@@ -102,9 +135,9 @@ if(isset($_SESSION['user_id'])){
         }
 
         .btn-login {
-            background: #FFD600;
-            color: #333;
-            border: 2px solid #FFD600;
+            background: var(--accent);
+            color: #2b1f0d;
+            border: 2px solid var(--accent);
         }
 
         .btn-login:hover {
@@ -114,7 +147,7 @@ if(isset($_SESSION['user_id'])){
 
         /* HERO SECTION */
         .hero {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            background: linear-gradient(135deg, #0f7a4d 0%, #0c6c45 45%, #0b3e2c 100%);
             color: white;
             padding: 120px 20px;
             text-align: left;
@@ -125,12 +158,13 @@ if(isset($_SESSION['user_id'])){
         .hero::before {
             content: '';
             position: absolute;
-            right: 0;
-            top: 0;
-            width: 50%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><circle cx="250" cy="250" r="200" fill="rgba(99,102,241,0.05)"/><circle cx="100" cy="100" r="150" fill="rgba(139,92,246,0.05)"/></svg>');
-            opacity: 0.5;
+            right: -10%;
+            top: -20%;
+            width: 60%;
+            height: 140%;
+            background: radial-gradient(circle at top, rgba(214, 162, 27, 0.18), transparent 60%),
+                        radial-gradient(circle at 30% 70%, rgba(255, 255, 255, 0.08), transparent 55%);
+            opacity: 0.9;
         }
 
         .hero-content {
@@ -140,10 +174,10 @@ if(isset($_SESSION['user_id'])){
         }
 
         .hero h1 {
-            font-size: 48px;
+            font-size: 50px;
             margin-bottom: 20px;
-            line-height: 1.2;
-            font-weight: 700;
+            line-height: 1.15;
+            font-weight: 800;
         }
 
         .hero p {
@@ -154,17 +188,18 @@ if(isset($_SESSION['user_id'])){
         }
 
         .btn-cta {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
+            background: linear-gradient(135deg, #d6a21b 0%, #f4c542 100%);
+            color: #2b1f0d;
             padding: 14px 40px;
             border: none;
-            border-radius: 5px;
+            border-radius: 999px;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s;
             text-decoration: none;
             display: inline-block;
+            box-shadow: 0 10px 25px rgba(214, 162, 27, 0.35);
         }
 
         .btn-cta:hover {
@@ -175,14 +210,14 @@ if(isset($_SESSION['user_id'])){
         /* FEATURES SECTION */
         .features {
             padding: 80px 20px;
-            background: #f8f9fa;
+            background: var(--paper);
         }
 
         .features h2 {
             text-align: center;
             font-size: 36px;
             margin-bottom: 50px;
-            color: #333;
+            color: var(--ink);
         }
 
         .features-grid {
@@ -194,17 +229,18 @@ if(isset($_SESSION['user_id'])){
         }
 
         .feature-card {
-            background: white;
+            background: var(--card);
             padding: 30px;
-            border-radius: 10px;
+            border-radius: 16px;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 18px rgba(31, 26, 23, 0.08);
             transition: all 0.3s;
         }
 
         .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 30px rgba(15, 122, 77, 0.18);
         }
 
         .feature-icon {
@@ -214,19 +250,19 @@ if(isset($_SESSION['user_id'])){
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f0f4ff 0%, #f5f3ff 100%);
-            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(214, 162, 27, 0.15) 0%, rgba(15, 122, 77, 0.08) 100%);
+            border-radius: 14px;
             padding: 15px;
         }
 
         .feature-card h3 {
             font-size: 20px;
             margin-bottom: 15px;
-            color: #333;
+            color: var(--ink);
         }
 
         .feature-card p {
-            color: #666;
+            color: var(--ink-soft);
             font-size: 14px;
             line-height: 1.6;
         }
@@ -234,7 +270,7 @@ if(isset($_SESSION['user_id'])){
         /* BENEFITS SECTION */
         .benefits {
             padding: 80px 20px;
-            background: white;
+            background: #fff;
         }
 
         .benefits-container {
@@ -249,7 +285,7 @@ if(isset($_SESSION['user_id'])){
         .benefits h2 {
             font-size: 36px;
             margin-bottom: 30px;
-            color: #333;
+            color: var(--ink);
         }
 
         .benefit-list {
@@ -260,35 +296,36 @@ if(isset($_SESSION['user_id'])){
             padding: 15px 0;
             padding-left: 40px;
             position: relative;
-            color: #555;
+            color: var(--ink-soft);
             font-size: 16px;
         }
 
         .benefit-list li::before {
-            content:6366f1
+            content: "✓";
             position: absolute;
             left: 0;
-            color: #00C853;
-            font-weight: bold;
+            color: var(--brand);
+            font-weight: 700;
             font-size: 20px;
-        }6366f1 0%, #8b5cf6
+        }
 
         .benefits-image {
-            background: linear-gradient(135deg, #00C853 0%, #00A840 100%);
+            background: linear-gradient(135deg, #0f7a4d 0%, #0c6c45 100%);
             height: 400px;
-            border-radius: 10px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-size: 80px;
+            box-shadow: var(--shadow);
         }
 
         /* CTA SECTION */
         .cta-section {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #0f7a4d 0%, #115e42 100%);
             color: white;
-            padding: 60px 20px;
+            padding: 70px 20px;
             text-align: center;
         }
 
@@ -305,16 +342,17 @@ if(isset($_SESSION['user_id'])){
 
         .btn-cta-white {
             background: white;
-            color: #6366f1;
+            color: var(--brand);
             padding: 14px 40px;
             border: none;
-            border-radius: 5px;
+            border-radius: 999px;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s;
             text-decoration: none;
             display: inline-block;
+            box-shadow: 0 10px 25px rgba(255, 255, 255, 0.15);
         }
 
         .btn-cta-white:hover {
@@ -324,9 +362,9 @@ if(isset($_SESSION['user_id'])){
 
         /* FOOTER */
         footer {
-            background: #1a1a2e;
+            background: #1f1a17;
             color: white;
-            padding: 40px 20px;
+            padding: 50px 20px;
             text-align: center;
         }
 
@@ -338,12 +376,13 @@ if(isset($_SESSION['user_id'])){
         /* RESPONSIVE */
         @media (max-width: 768px) {
             nav {
-                gap: 15px;
-                flex-wrap: wrap;
+                gap: 12px;
+                justify-content: flex-start;
             }
 
-            nav a {
-                display: none;
+            .nav-links {
+                width: 100%;
+                justify-content: flex-start;
             }
 
             .hero h1 {
@@ -376,9 +415,11 @@ if(isset($_SESSION['user_id'])){
             <div class="navbar">
                 <div class="logo">💰 Minhas Economias</div>
                 <nav>
-                    <a href="#como-funciona">Como funciona</a>
-                    <a href="#beneficios">Benefícios</a>
-                    <a href="#recursos">Recursos</a>
+                    <div class="nav-links">
+                        <a href="#como-funciona">Como funciona</a>
+                        <a href="#beneficios">Benefícios</a>
+                        <a href="#recursos">Recursos</a>
+                    </div>
                     <div class="btn-group">
                         <a href="registar.php" class="btn btn-download">Baixar agora</a>
                         <a href="login.php" class="btn btn-login">Entrar</a>

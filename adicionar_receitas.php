@@ -68,20 +68,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Adicionar Receita - Minhas Economias</title>
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
+
         :root {
-            --primary:      #00C853;
-            --primary-dark: #00A840;
-            --success:      #10b981;
-            --success-bg:   #f0fdf4;
-            --error:        #ef4444;
-            --error-bg:     #fef2f2;
-            --text-dark:    #212121;
-            --text-muted:   #616161;
-            --border:       #e0e0e0;
-            --bg-light:     #f5f5f5;
-            --radius:       10px;
-            --shadow-sm:    0 2px 8px rgba(0,0,0,0.08);
-            --shadow-md:    0 8px 20px rgba(0,0,0,0.12);
+            --brand: #0f7a4d;
+            --brand-dark: #0c6c45;
+            --success: #0f9b4d;
+            --success-bg: #f0fdf4;
+            --error: #b91c1c;
+            --error-bg: #fef2f2;
+            --text-dark: #1f1a17;
+            --text-muted: #5b524a;
+            --border: #e7ddcf;
+            --bg-light: #f8f3ea;
+            --radius: 14px;
+            --shadow-sm: 0 8px 18px rgba(31, 26, 23, 0.08);
+            --shadow-md: 0 18px 40px rgba(31, 26, 23, 0.14);
         }
 
         * {
@@ -91,15 +93,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg-light);
+            font-family: 'Lexend', "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top, rgba(214, 162, 27, 0.14), transparent 45%),
+                        var(--bg-light);
             color: var(--text-dark);
             min-height: 100vh;
             line-height: 1.5;
         }
 
         header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
             color: white;
             padding: 1.5rem 2rem;
             box-shadow: var(--shadow-md);
@@ -120,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 1.6rem;
             font-weight: 600;
             margin: 0;
+            font-family: 'Sora', 'Lexend', sans-serif;
         }
 
         .btn-back {
@@ -146,6 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: var(--radius);
             padding: 2rem;
             box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
         }
 
         .form-title {
@@ -153,6 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 600;
             color: var(--text-dark);
             margin-bottom: 0.5rem;
+            font-family: 'Sora', 'Lexend', sans-serif;
         }
 
         .form-subtitle {
@@ -207,9 +213,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: var(--brand);
             background: white;
-            box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1);
+            box-shadow: 0 0 0 3px rgba(15, 122, 77, 0.12);
         }
 
         textarea {
@@ -249,13 +255,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .btn-submit {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
             color: white;
         }
 
         .btn-submit:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 200, 83, 0.3);
+            box-shadow: 0 10px 25px rgba(15, 122, 77, 0.28);
         }
 
         .btn-cancel {

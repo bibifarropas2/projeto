@@ -106,22 +106,24 @@ try {
     <title>Dashboard - Minhas Economias</title>
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
+
         :root {
-            --primary:      #00C853;
-            --primary-dark: #00A840;
-            --secondary:    #FFD600;
-            --success:      #10b981;
-            --danger:       #ef4444;
-            --warning:      #f59e0b;
-            --info:         #3b82f6;
-            --gray-50:      #fafafa;
-            --gray-100:     #f5f5f5;
-            --gray-200:     #e0e0e0;
-            --gray-600:     #616161;
-            --gray-800:     #212121;
-            --radius:       10px;
-            --shadow-sm:    0 2px 8px rgba(0,0,0,0.08);
-            --shadow-md:    0 8px 20px rgba(0,0,0,0.12);
+            --brand: #0f7a4d;
+            --brand-dark: #0c6c45;
+            --accent: #d6a21b;
+            --success: #0f9b4d;
+            --danger: #b91c1c;
+            --warning: #c27803;
+            --info: #2563eb;
+            --gray-50: #fffdfa;
+            --gray-100: #f8f3ea;
+            --gray-200: #e7ddcf;
+            --gray-600: #5b524a;
+            --gray-800: #1f1a17;
+            --radius: 14px;
+            --shadow-sm: 0 8px 18px rgba(31, 26, 23, 0.08);
+            --shadow-md: 0 18px 40px rgba(31, 26, 23, 0.14);
         }
 
         * {
@@ -131,15 +133,16 @@ try {
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--gray-100);
+            font-family: 'Lexend', "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top, rgba(214, 162, 27, 0.12), transparent 45%),
+                        var(--gray-100);
             color: var(--gray-800);
             min-height: 100vh;
             line-height: 1.5;
         }
 
         header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
             color: white;
             padding: 1.5rem 2rem;
             box-shadow: var(--shadow-md);
@@ -162,6 +165,7 @@ try {
             font-size: 1.8rem;
             font-weight: 600;
             margin: 0;
+            font-family: 'Sora', 'Lexend', sans-serif;
         }
 
         .header-left p {
@@ -192,11 +196,11 @@ try {
         }
 
         nav a.btn-logout {
-            background: rgba(255, 214, 0, 0.2);
+            background: rgba(214, 162, 27, 0.3);
         }
 
         nav a.btn-logout:hover {
-            background: rgba(255, 214, 0, 0.3);
+            background: rgba(214, 162, 27, 0.45);
         }
 
         .container {
@@ -210,6 +214,7 @@ try {
             font-weight: 600;
             color: var(--gray-800);
             margin-bottom: 1.2rem;
+            font-family: 'Sora', 'Lexend', sans-serif;
         }
 
         .stats-grid {
@@ -220,13 +225,14 @@ try {
         }
 
         .card {
-            background: white;
+            background: var(--gray-50);
             border-radius: var(--radius);
             padding: 1.8rem;
             box-shadow: var(--shadow-sm);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            border: 1px solid var(--gray-200);
         }
 
         .card:hover {
@@ -243,7 +249,7 @@ try {
             height: 100%;
         }
 
-        .card.balance::before { background: var(--primary); }
+        .card.balance::before { background: var(--brand); }
         .card.income::before { background: var(--success); }
         .card.expense::before { background: var(--danger); }
         .card.monthly::before { background: var(--info); }
@@ -299,8 +305,8 @@ try {
         }
 
         .action-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
+            border-color: var(--brand);
+            color: var(--brand);
             box-shadow: var(--shadow-sm);
         }
 
@@ -339,7 +345,7 @@ try {
         }
 
         .view-all {
-            color: var(--primary);
+            color: var(--brand);
             text-decoration: none;
             font-size: 0.85rem;
             font-weight: 600;
