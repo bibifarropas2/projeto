@@ -209,6 +209,143 @@ try {
             padding: 2rem 1.5rem;
         }
 
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .sidebar-card {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+            padding: 1.2rem 1.4rem;
+        }
+
+        .sidebar-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.55rem 0;
+            border-bottom: 1px dashed var(--gray-200);
+            font-size: 0.92rem;
+            color: var(--gray-600);
+        }
+
+        .sidebar-row:last-child {
+            border-bottom: none;
+        }
+
+        .sidebar-row strong {
+            color: var(--gray-800);
+            font-weight: 700;
+        }
+
+        .sidebar-actions {
+            display: grid;
+            gap: 0.7rem;
+        }
+
+        .sidebar-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.7rem 0.9rem;
+            border-radius: 10px;
+            border: 1px solid var(--gray-200);
+            text-decoration: none;
+            color: var(--gray-800);
+            font-weight: 600;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-actions a:hover {
+            border-color: var(--brand);
+            color: var(--brand);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .main-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1.6rem;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.6rem;
+        }
+
+        .panel {
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 1rem 1.4rem;
+            background: #f3eadb;
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 700;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .panel-body {
+            padding: 1.2rem 1.4rem;
+        }
+
+        .row-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .row-item:last-child {
+            border-bottom: none;
+        }
+
+        .row-item span {
+            color: var(--gray-600);
+        }
+
+        .row-item strong {
+            font-size: 1.05rem;
+        }
+
+        .panel-header .view-all {
+            color: var(--brand);
+            font-size: 0.85rem;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
         .section-title {
             font-size: 1.4rem;
             font-weight: 600;
@@ -449,7 +586,11 @@ try {
 
         /* RESPONSIVE */
         @media (max-width: 1024px) {
-            .content-grid {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -460,18 +601,6 @@ try {
                 align-items: flex-start;
             }
 
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .card { 
-                padding: 1.2rem; 
-            }
-
-            .card-value { 
-                font-size: 1.8rem; 
-            }
-            
             nav {
                 gap: 0.3rem;
             }
@@ -486,8 +615,8 @@ try {
                 font-size: 0.9rem;
             }
 
-            .section-header {
-                padding: 1rem 1.2rem;
+            .panel-header {
+                padding: 0.9rem 1.1rem;
             }
         }
 
@@ -496,24 +625,12 @@ try {
                 padding: 1rem;
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .quick-actions {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .action-btn-icon {
-                font-size: 1.5rem;
-            }
-
             th, td {
                 padding: 0.7rem 0.8rem;
             }
 
-            .card-value {
-                font-size: 1.6rem;
+            .panel-body {
+                padding: 1rem 1.1rem;
             }
         }
     </style>
@@ -536,125 +653,154 @@ try {
 </header>
 
 <div class="container">
-
-    <!-- CARDS DE ESTATÍSTICAS -->
-    <div class="stats-grid">
-        <div class="card balance">
-            <div class="card-label">Saldo Total</div>
-            <div class="card-value <?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
-                <?= number_format($saldo_atual, 2, ',', '.') ?> €
-            </div>
-            <div class="card-subtitle">Receitas - Despesas</div>
-        </div>
-
-        <div class="card income">
-            <div class="card-label">Total de Entradas</div>
-            <div class="card-value positive">
-                <?= number_format($total_receitas, 2, ',', '.') ?> €
-            </div>
-            <div class="card-subtitle">Desde o início</div>
-        </div>
-
-        <div class="card expense">
-            <div class="card-label">Total de Saídas</div>
-            <div class="card-value negative">
-                <?= number_format($total_despesas, 2, ',', '.') ?> €
-            </div>
-            <div class="card-subtitle">Todas as despesas</div>
-        </div>
-
-        <div class="card monthly">
-            <div class="card-label">Saldo de <?= $mes_atual ?></div>
-            <div class="card-value <?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
-                <?= number_format($saldo_mes, 2, ',', '.') ?> €
-            </div>
-            <div class="card-subtitle">Este mês</div>
-        </div>
-    </div>
-
-    <!-- AÇÕES RÁPIDAS -->
-    <h2 class="section-title">Ações Rápidas</h2>
-    <div class="quick-actions">
-        <a href="adicionar_receitas.php" class="action-btn">
-            <span class="action-btn-icon">💵</span>
-            Adicionar Receita
-        </a>
-        <a href="adicionar_despesa.php" class="action-btn">
-            <span class="action-btn-icon">💸</span>
-            Adicionar Despesa
-        </a>
-        <a href="#" class="action-btn">
-            <span class="action-btn-icon">📈</span>
-            Ver Relatórios
-        </a>
-        <a href="#" class="action-btn">
-            <span class="action-btn-icon">⚙️</span>
-            Definições
-        </a>
-    </div>
-
-    <!-- TRANSAÇÕES E CATEGORIAS -->
-    <h2 class="section-title">Últimas Movimentações</h2>
-    <div class="content-grid">
-        <div class="transactions-section">
-            <div class="section-header">
-                <h2>Transações Recentes</h2>
-                <a href="#" class="view-all">Ver Todas →</a>
-            </div>
-            <?php if ($count_transacoes > 0): ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Descrição</th>
-                            <th>Tipo</th>
-                            <th class="valor">Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($transacoes as $t): ?>
-                            <tr>
-                                <td class="data"><?= date('d/m/Y', strtotime($t['data'])) ?></td>
-                                <td><?= htmlspecialchars(substr($t['descricao'], 0, 30)) ?></td>
-                                <td>
-                                    <span class="<?= $t['tipo'] === 'receita' ? 'tipo-receita' : 'tipo-despesa' ?>">
-                                        <?= ucfirst($t['tipo']) ?>
-                                    </span>
-                                </td>
-                                <td class="valor <?= $t['tipo'] === 'receita' ? 'positive' : 'negative' ?>">
-                                    <?= ($t['tipo'] === 'receita' ? '+' : '-') . number_format($t['valor'], 2, ',', '.') ?> €
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <div class="no-transactions">
-                    <p>📭 Nenhuma transação registrada ainda.</p>
-                    <p>Comece a adicionar receitas e despesas!</p>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-card">
+                <div class="sidebar-title">Contas</div>
+                <div class="sidebar-row">
+                    <span>Saldo atual</span>
+                    <strong class="<?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
+                        <?= number_format($saldo_atual, 2, ',', '.') ?> €
+                    </strong>
                 </div>
-            <?php endif; ?>
-        </div>
-
-        <div class="categories-section">
-            <div class="section-header">
-                <h2>Despesas por Categoria</h2>
+                <div class="sidebar-row">
+                    <span>Entradas</span>
+                    <strong class="positive"><?= number_format($total_receitas, 2, ',', '.') ?> €</strong>
+                </div>
+                <div class="sidebar-row">
+                    <span>Saídas</span>
+                    <strong class="negative"><?= number_format($total_despesas, 2, ',', '.') ?> €</strong>
+                </div>
             </div>
-            <?php if (!empty($despesas_categoria)): ?>
-                <?php foreach($despesas_categoria as $cat): ?>
-                    <div class="category-item">
-                        <span class="category-name"><?= htmlspecialchars($cat['categoria']) ?></span>
-                        <span class="category-amount"><?= number_format($cat['total'], 2, ',', '.') ?> €</span>
+
+            <div class="sidebar-card">
+                <div class="sidebar-title">Ações rápidas</div>
+                <div class="sidebar-actions">
+                    <a href="adicionar_receitas.php">➕ Adicionar receita</a>
+                    <a href="adicionar_despesa.php">➖ Adicionar despesa</a>
+                    <a href="relatorios.php">📈 Ver relatórios</a>
+                </div>
+            </div>
+
+            <div class="sidebar-card">
+                <div class="sidebar-title">Resumo do mês</div>
+                <div class="sidebar-row">
+                    <span>Entradas</span>
+                    <strong class="positive"><?= number_format($receitas_mes, 2, ',', '.') ?> €</strong>
+                </div>
+                <div class="sidebar-row">
+                    <span>Saídas</span>
+                    <strong class="negative"><?= number_format($despesas_mes, 2, ',', '.') ?> €</strong>
+                </div>
+                <div class="sidebar-row">
+                    <span>Saldo</span>
+                    <strong class="<?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
+                        <?= number_format($saldo_mes, 2, ',', '.') ?> €
+                    </strong>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <div class="panel-grid">
+                <section class="panel">
+                    <div class="panel-header">Entradas e saídas</div>
+                    <div class="panel-body">
+                        <div class="row-item">
+                            <span>Total de entradas</span>
+                            <strong class="positive"><?= number_format($total_receitas, 2, ',', '.') ?> €</strong>
+                        </div>
+                        <div class="row-item">
+                            <span>Total de saídas</span>
+                            <strong class="negative"><?= number_format($total_despesas, 2, ',', '.') ?> €</strong>
+                        </div>
+                        <div class="row-item">
+                            <span>Saldo total</span>
+                            <strong class="<?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
+                                <?= number_format($saldo_atual, 2, ',', '.') ?> €
+                            </strong>
+                        </div>
                     </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div style="padding: 2rem; text-align: center; color: var(--gray-600);">
-                    <p>📊 Sem dados de despesas</p>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
+                </section>
 
+                <section class="panel">
+                    <div class="panel-header">Este mês (<?= $mes_atual ?>)</div>
+                    <div class="panel-body">
+                        <div class="row-item">
+                            <span>Entradas do mês</span>
+                            <strong class="positive"><?= number_format($receitas_mes, 2, ',', '.') ?> €</strong>
+                        </div>
+                        <div class="row-item">
+                            <span>Saídas do mês</span>
+                            <strong class="negative"><?= number_format($despesas_mes, 2, ',', '.') ?> €</strong>
+                        </div>
+                        <div class="row-item">
+                            <span>Saldo do mês</span>
+                            <strong class="<?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
+                                <?= number_format($saldo_mes, 2, ',', '.') ?> €
+                            </strong>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <span>Transações recentes</span>
+                    <a href="transacoes.php" class="view-all">Ver todas →</a>
+                </div>
+                <?php if ($count_transacoes > 0): ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Tipo</th>
+                                <th class="valor">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($transacoes as $t): ?>
+                                <tr>
+                                    <td class="data"><?= date('d/m/Y', strtotime($t['data'])) ?></td>
+                                    <td><?= htmlspecialchars(substr($t['descricao'], 0, 30)) ?></td>
+                                    <td>
+                                        <span class="<?= $t['tipo'] === 'receita' ? 'tipo-receita' : 'tipo-despesa' ?>">
+                                            <?= ucfirst($t['tipo']) ?>
+                                        </span>
+                                    </td>
+                                    <td class="valor <?= $t['tipo'] === 'receita' ? 'positive' : 'negative' ?>">
+                                        <?= ($t['tipo'] === 'receita' ? '+' : '-') . number_format($t['valor'], 2, ',', '.') ?> €
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="no-transactions">
+                        <p>📭 Nenhuma transação registrada ainda.</p>
+                        <p>Comece a adicionar receitas e despesas!</p>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">Despesas por categoria</div>
+                <?php if (!empty($despesas_categoria)): ?>
+                    <?php foreach($despesas_categoria as $cat): ?>
+                        <div class="category-item">
+                            <span class="category-name"><?= htmlspecialchars($cat['categoria']) ?></span>
+                            <span class="category-amount"><?= number_format($cat['total'], 2, ',', '.') ?> €</span>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="padding: 2rem; text-align: center; color: var(--gray-600);">
+                        <p>📊 Sem dados de despesas</p>
+                    </div>
+                <?php endif; ?>
+            </section>
+        </main>
+    </div>
 </div>
 
 </body>

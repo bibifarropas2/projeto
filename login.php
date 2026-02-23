@@ -114,9 +114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 2rem;
         }
 
-        .graphic-icon {
-            font-size: 5rem;
+        .money-image {
+            width: 150px;
+            height: auto;
             margin-bottom: 1.5rem;
+            filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.25));
         }
 
         .login-form-section {
@@ -299,7 +301,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="login-wrapper">
     <div class="login-graphic">
-        <div class="graphic-icon">💰</div>
+        <img class="money-image" src="assets/images/money.svg" alt="IlustraÃ§Ã£o de dinheiro">
         <h2>Bem-vindo de volta!</h2>
         <p>Aceda à sua conta e gerencie suas finanças de forma inteligente.</p>
     </div>

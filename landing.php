@@ -421,7 +421,7 @@ if(isset($_SESSION['user_id'])){
                         <a href="#recursos">Recursos</a>
                     </div>
                     <div class="btn-group">
-                        <a href="registar.php" class="btn btn-download">Baixar agora</a>
+                        <a href="registar.php" class="btn btn-download">Registar</a>
                         <a href="login.php" class="btn btn-login">Entrar</a>
                     </div>
                 </nav>

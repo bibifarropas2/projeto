@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Tempo de geração: 23-Jan-2026 às 20:45
--- Versão do servidor: 8.0.44-0ubuntu0.24.04.1
+-- Tempo de geração: 03-Fev-2026 às 13:09
+-- Versão do servidor: 8.0.45-0ubuntu0.24.04.1
 -- versão do PHP: 7.4.33
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -24,6 +24,20 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Estrutura da tabela `categorias`
+--
+
+CREATE TABLE `categorias` (
+  `id` int NOT NULL,
+  `nome` varchar(100) NOT NULL,
+  `tipo` enum('receita','despesa') NOT NULL,
+  `descricao` varchar(255) DEFAULT NULL,
+  `criada_em` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura da tabela `despesas`
 --
 
@@ -32,7 +46,8 @@ CREATE TABLE `despesas` (
   `descricao` varchar(100) NOT NULL,
   `valor` decimal(10,2) NOT NULL,
   `data_despesa` date NOT NULL,
-  `user_id` int DEFAULT NULL
+  `user_id` int DEFAULT NULL,
+  `categoria` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -75,7 +90,6 @@ CREATE TABLE `transacoes` (
   `descricao` varchar(255) NOT NULL,
   `tipo` enum('receita','despesa') NOT NULL,
   `valor` decimal(10,2) NOT NULL,
-  `categoria` varchar(100),
   `data` date NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -98,11 +112,20 @@ CREATE TABLE `utilizadores` (
 
 INSERT INTO `utilizadores` (`id`, `username`, `password`, `criado_em`) VALUES
 (1, 'bia', '$2y$10$rGkxauyurOz8vArZwp516.31uvWEJBnjDG0UdVXMTwQp6HUs8/i0G', '2026-01-19 13:31:55'),
-(2, 'bibi', '$2y$10$FOmk49dvjDLrcZ2rqA7V.OjH8nlkwaBYE7DcT5.Y2mcQGvrpj1mz6', '2026-01-23 19:32:21');
+(2, 'bibi', '$2y$10$FOmk49dvjDLrcZ2rqA7V.OjH8nlkwaBYE7DcT5.Y2mcQGvrpj1mz6', '2026-01-23 19:32:21'),
+(3, 'liedson', '$2y$10$MUYu/x.180BjmSrPCOu8TOpDDedw/4d3stezdxVKh66STxdnrObx.', '2026-01-23 19:49:37'),
+(4, 'Liedson1', '$2y$10$FNObw6MwdL4ZIav35TjaOOIsSUahan/PT26dSrUWkSzZdhGf3tJJu', '2026-01-26 22:26:17');
 
 --
 -- Índices para tabelas despejadas
 --
+
+--
+-- Índices para tabela `categorias`
+--
+ALTER TABLE `categorias`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `nome` (`nome`);
 
 --
 -- Índices para tabela `despesas`
@@ -144,6 +167,12 @@ ALTER TABLE `utilizadores`
 --
 
 --
+-- AUTO_INCREMENT de tabela `categorias`
+--
+ALTER TABLE `categorias`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `despesas`
 --
 ALTER TABLE `despesas`
@@ -171,7 +200,7 @@ ALTER TABLE `transacoes`
 -- AUTO_INCREMENT de tabela `utilizadores`
 --
 ALTER TABLE `utilizadores`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Restrições para despejos de tabelas
