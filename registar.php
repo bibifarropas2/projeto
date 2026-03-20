@@ -9,8 +9,8 @@ if (isset($_SESSION['user_id'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
-    $password = trim($_POST['password'] ?? '');
-    $password_confirm = trim($_POST['password_confirm'] ?? '');
+    $password = (string)($_POST['password'] ?? '');
+    $password_confirm = (string)($_POST['password_confirm'] ?? '');
 
     // Validações
     if (strlen($username) < 3) {
@@ -23,7 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Verifica se o utilizador já existe
             $stmt = $pdo->prepare(
-                "SELECT id FROM utilizadores WHERE username = :username"
+                "SELECT id
+                 FROM utilizadores
+                 WHERE LOWER(username) = LOWER(:username)
+                 LIMIT 1"
             );
             $stmt->execute(['username' => $username]);
 
@@ -43,8 +46,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'password' => $hash
                 ]);
 
-                $success = "Conta criada com sucesso! Redirecionando para login...";
-                header("refresh:2;url=login.php");
+                $novoUserId = (int)$pdo->lastInsertId();
+
+                // Setup complementar: se falhar, não deve impedir o registo da conta.
+                try {
+                    $categoriasPadrao = [
+                        'Alimentação',
+                        'Transportes',
+                        'Habitação',
+                        'Saúde',
+                        'Educação',
+                        'Entretenimento',
+                        'Compras',
+                        'Utilities',
+                        'Seguros',
+                        'Outro'
+                    ];
+
+                    $catStmt = $pdo->prepare(
+                        "INSERT INTO categorias (nome, tipo, descricao, user_id, ativa)
+                         VALUES (:nome, 'despesa', NULL, :user_id, 1)"
+                    );
+                    foreach ($categoriasPadrao as $nomeCategoria) {
+                        $catStmt->execute([
+                            'nome' => $nomeCategoria,
+                            'user_id' => $novoUserId
+                        ]);
+                    }
+
+                    $metaStmt = $pdo->prepare(
+                        "INSERT INTO metas_poupanca (user_id, objetivo_mensal)
+                         VALUES (:user_id, 0.00)"
+                    );
+                    $metaStmt->execute(['user_id' => $novoUserId]);
+                } catch (Throwable $setupError) {
+                    error_log('Setup pós-registo falhou para user_id ' . $novoUserId . ': ' . $setupError->getMessage());
+                }
+
+                header("Location: login.php?created=1");
+                exit;
             }
         } catch (PDOException $e) {
             $error = "Erro ao criar conta. Tente novamente.";
@@ -58,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registar - Minhas Economias</title>
+    <link rel="stylesheet" href="assets/css/site-enhancements.css">
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
@@ -337,13 +378,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="register-wrapper">
     <div class="register-graphic">
-        <img class="money-image" src="assets/images/money.svg" alt="IlustraÃ§Ã£o de dinheiro">
+        <img class="money-image" src="assets/images/money.svg" alt="Ilustracao de dinheiro">
         <h2>Bem-vindo!</h2>
         <p>Crie sua conta gratuita e comece a gerir suas finanças de forma inteligente.</p>
-</div>
+    </div>
 
-</body>
-</html>
     <div class="register-form-section">
         <h3>Criar Conta</h3>
         <p>Insira os dados para registar-se</p>
@@ -412,3 +451,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+
+</body>
+</html>

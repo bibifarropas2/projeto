@@ -12,19 +12,19 @@ $user_id = $_SESSION['user_id'];
 $error = '';
 $success = '';
 
-// Categorias de despesas
-$categorias = [
-    'Alimentação',
-    'Transportes',
-    'Habitação',
-    'Saúde',
-    'Educação',
-    'Entretenimento',
-    'Compras',
-    'Utilities',
-    'Seguros',
-    'Outro'
-];
+$categorias = [];
+
+try {
+    $stmt = $pdo->prepare(
+        "SELECT nome FROM categorias
+         WHERE user_id = :user_id AND tipo = 'despesa' AND ativa = 1
+         ORDER BY nome ASC"
+    );
+    $stmt->execute(['user_id' => $user_id]);
+    $categorias = array_column($stmt->fetchAll(), 'nome');
+} catch (PDOException $e) {
+    $categorias = [];
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $descricao = trim($_POST['descricao'] ?? '');
@@ -39,6 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "O valor deve ser um número positivo.";
     } elseif (strlen($descricao) > 255) {
         $error = "A descrição não pode ter mais de 255 caracteres.";
+    } elseif (!in_array($categoria, $categorias, true)) {
+        $error = "Categoria inválida.";
+    } elseif (!DateTime::createFromFormat('Y-m-d', $data)) {
+        $error = "Data inválida.";
     } else {
         try {
             $valor = floatval($valor);
@@ -56,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = "Despesa adicionada com sucesso!";
             header("refresh:2;url=dashboard.php");
         } catch (PDOException $e) {
-            $error = "Erro ao adicionar despesa: " . $e->getMessage();
+            $error = "Erro ao adicionar despesa.";
         }
     }
 }
@@ -67,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adicionar Despesa - Minhas Economias</title>
+    <link rel="stylesheet" href="assets/css/site-enhancements.css">
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
@@ -356,6 +361,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <?php if (empty($categorias)): ?>
+                        <div class="help-text">Sem categorias. Crie em <a href="categorias.php">Categorias</a>.</div>
+                    <?php endif; ?>
                 </div>
             </div>
 

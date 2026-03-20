@@ -1,79 +1,69 @@
 <?php
-session_start();
+require 'config/app.php';
 require 'config/db.php';
 
-// Verifica se o utilizador está logado
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+require_auth();
 
 $user_id = $_SESSION['user_id'];
 $error = '';
 $success = '';
 
-$categorias = [
-    'Salário',
-    'Freelance',
-    'Investimentos',
-    'Bónus',
-    'Presente',
-    'Reembolso',
-    'Venda',
-    'Renda',
-    'Outro'
-];
-
+// Buscar categorias de receita do utilizador
 try {
-    $stmt = $pdo->prepare(
-        "SELECT nome FROM categorias
-         WHERE user_id = :user_id AND tipo = 'receita' AND ativa = 1
-         ORDER BY nome ASC"
-    );
+    $stmt = $pdo->prepare("SELECT id, nome FROM categorias WHERE user_id = :user_id AND tipo = 'receita' ORDER BY nome");
     $stmt->execute(['user_id' => $user_id]);
-    $categoriasReceita = array_column($stmt->fetchAll(), 'nome');
-    if (!empty($categoriasReceita)) {
-        $categorias = $categoriasReceita;
-    }
+    $categorias = $stmt->fetchAll();
 } catch (PDOException $e) {
-    // Mantem categorias padrao de receita.
+    $categorias = [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $error = 'Sessao expirada. Atualize a pagina e tente novamente.';
+    }
+
     $descricao = trim($_POST['descricao'] ?? '');
     $valor = trim($_POST['valor'] ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
     $data = trim($_POST['data'] ?? '');
 
     // Validações
-    if (empty($descricao) || empty($valor) || empty($categoria) || empty($data)) {
+    if ($error === '' && (empty($descricao) || empty($valor) || $categoria === '' || empty($data))) {
         $error = "Todos os campos são obrigatórios.";
-    } elseif (!is_numeric($valor) || $valor <= 0) {
+    } elseif ($error === '' && (!is_numeric($valor) || $valor <= 0)) {
         $error = "O valor deve ser um número positivo.";
-    } elseif (strlen($descricao) > 255) {
+    } elseif ($error === '' && strlen($descricao) > 255) {
         $error = "A descrição não pode ter mais de 255 caracteres.";
-    } elseif (!in_array($categoria, $categorias, true)) {
-        $error = "Categoria inválida.";
-    } elseif (!DateTime::createFromFormat('Y-m-d', $data)) {
-        $error = "Data inválida.";
-    } else {
+    } elseif ($error === '') {
         try {
             $valor = floatval($valor);
+            $categoria_id = intval($categoria);
+
+            $stmt = $pdo->prepare("SELECT id FROM categorias WHERE id = :categoria_id AND user_id = :user_id AND tipo = 'receita' LIMIT 1");
+            $stmt->execute([
+                'categoria_id' => $categoria_id,
+                'user_id' => $user_id
+            ]);
+            if (!$stmt->fetch()) {
+                throw new RuntimeException('Categoria invalida para o utilizador.');
+            }
+
             $stmt = $pdo->prepare(
-                "INSERT INTO transacoes (user_id, tipo, descricao, valor, categoria, data)
-                 VALUES (:user_id, 'receita', :descricao, :valor, :categoria, :data)"
+                "INSERT INTO transacoes (user_id, tipo, descricao, valor, categoria_id, data)
+                 VALUES (:user_id, 'receita', :descricao, :valor, :categoria_id, :data)"
             );
             $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
             $stmt->bindParam(':descricao', $descricao, PDO::PARAM_STR);
             $stmt->bindParam(':valor', $valor, PDO::PARAM_STR);
-            $stmt->bindParam(':categoria', $categoria, PDO::PARAM_STR);
+            $stmt->bindParam(':categoria_id', $categoria_id, PDO::PARAM_INT);
             $stmt->bindParam(':data', $data, PDO::PARAM_STR);
             $stmt->execute();
 
             $success = "Receita adicionada com sucesso!";
             header("refresh:2;url=dashboard.php");
-        } catch (PDOException $e) {
-            $error = "Erro ao adicionar receita.";
+        } catch (Throwable $e) {
+            error_log('Erro ao adicionar receita: ' . $e->getMessage());
+            $error = "Erro ao adicionar receita. Tente novamente.";
         }
     }
 }
@@ -336,6 +326,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
             <div class="form-group">
                 <label for="descricao">Descrição da Receita *</label>
                 <input 
@@ -369,8 +360,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select id="categoria" name="categoria" required>
                         <option value="">Escolha uma categoria</option>
                         <?php foreach ($categorias as $cat): ?>
-                            <option value="<?= htmlspecialchars($cat) ?>">
-                                <?= htmlspecialchars($cat) ?>
+                            <option value="<?= htmlspecialchars($cat['id']) ?>">
+                                <?= htmlspecialchars($cat['nome']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

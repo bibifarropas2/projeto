@@ -1,79 +1,69 @@
 <?php
-session_start();
+require 'config/app.php';
 require 'config/db.php';
 
-// Verifica se o utilizador está logado
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
+require_auth();
 
 $user_id = $_SESSION['user_id'];
 $error = '';
 $success = '';
 
-$categorias = [
-    'Salário',
-    'Freelance',
-    'Investimentos',
-    'Bónus',
-    'Presente',
-    'Reembolso',
-    'Venda',
-    'Renda',
-    'Outro'
-];
-
+// Buscar categorias de despesa do utilizador
 try {
-    $stmt = $pdo->prepare(
-        "SELECT nome FROM categorias
-         WHERE user_id = :user_id AND tipo = 'receita' AND ativa = 1
-         ORDER BY nome ASC"
-    );
+    $stmt = $pdo->prepare("SELECT id, nome FROM categorias WHERE user_id = :user_id AND tipo = 'despesa' ORDER BY nome");
     $stmt->execute(['user_id' => $user_id]);
-    $categoriasReceita = array_column($stmt->fetchAll(), 'nome');
-    if (!empty($categoriasReceita)) {
-        $categorias = $categoriasReceita;
-    }
+    $categorias = $stmt->fetchAll();
 } catch (PDOException $e) {
-    // Mantem categorias padrao de receita.
+    $categorias = [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $error = 'Sessao expirada. Atualize a pagina e tente novamente.';
+    }
+
     $descricao = trim($_POST['descricao'] ?? '');
     $valor = trim($_POST['valor'] ?? '');
     $categoria = trim($_POST['categoria'] ?? '');
     $data = trim($_POST['data'] ?? '');
 
     // Validações
-    if (empty($descricao) || empty($valor) || empty($categoria) || empty($data)) {
+    if ($error === '' && (empty($descricao) || empty($valor) || $categoria === '' || empty($data))) {
         $error = "Todos os campos são obrigatórios.";
-    } elseif (!is_numeric($valor) || $valor <= 0) {
+    } elseif ($error === '' && (!is_numeric($valor) || $valor <= 0)) {
         $error = "O valor deve ser um número positivo.";
-    } elseif (strlen($descricao) > 255) {
+    } elseif ($error === '' && strlen($descricao) > 255) {
         $error = "A descrição não pode ter mais de 255 caracteres.";
-    } elseif (!in_array($categoria, $categorias, true)) {
-        $error = "Categoria inválida.";
-    } elseif (!DateTime::createFromFormat('Y-m-d', $data)) {
-        $error = "Data inválida.";
-    } else {
+    } elseif ($error === '') {
         try {
             $valor = floatval($valor);
+            $categoria_id = intval($categoria);
+
+            $stmt = $pdo->prepare("SELECT id FROM categorias WHERE id = :categoria_id AND user_id = :user_id AND tipo = 'despesa' LIMIT 1");
+            $stmt->execute([
+                'categoria_id' => $categoria_id,
+                'user_id' => $user_id
+            ]);
+            if (!$stmt->fetch()) {
+                throw new RuntimeException('Categoria invalida para o utilizador.');
+            }
+
             $stmt = $pdo->prepare(
-                "INSERT INTO transacoes (user_id, tipo, descricao, valor, categoria, data)
-                 VALUES (:user_id, 'receita', :descricao, :valor, :categoria, :data)"
+                "INSERT INTO transacoes (user_id, tipo, descricao, valor, categoria_id, data)
+                 VALUES (:user_id, 'despesa', :descricao, :valor, :categoria_id, :data)"
             );
             $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
             $stmt->bindParam(':descricao', $descricao, PDO::PARAM_STR);
             $stmt->bindParam(':valor', $valor, PDO::PARAM_STR);
-            $stmt->bindParam(':categoria', $categoria, PDO::PARAM_STR);
+            $stmt->bindParam(':categoria_id', $categoria_id, PDO::PARAM_INT);
             $stmt->bindParam(':data', $data, PDO::PARAM_STR);
             $stmt->execute();
 
-            $success = "Receita adicionada com sucesso!";
+            $success = "Despesa adicionada com sucesso!";
             header("refresh:2;url=dashboard.php");
-        } catch (PDOException $e) {
-            $error = "Erro ao adicionar receita.";
+        } catch (Throwable $e) {
+            error_log('Erro ao adicionar despesa: ' . $e->getMessage());
+            $error = "Erro ao adicionar despesa. Tente novamente.";
         }
     }
 }
@@ -83,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adicionar Receita - Minhas Economias</title>
+    <title>Adicionar Despesa - Minhas Economias</title>
     <link rel="stylesheet" href="assets/css/site-enhancements.css">
     
     <style>
@@ -92,10 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         :root {
             --brand: #0f7a4d;
             --brand-dark: #0c6c45;
+            --danger: #b91c1c;
+            --danger-bg: #fef2f2;
             --success: #0f9b4d;
             --success-bg: #f0fdf4;
-            --error: #b91c1c;
-            --error-bg: #fef2f2;
             --text-dark: #1f1a17;
             --text-muted: #5b524a;
             --border: #e7ddcf;
@@ -121,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         header {
-            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+            background: linear-gradient(135deg, var(--danger) 0%, #991b1b 100%);
             color: white;
             padding: 1.5rem 2rem;
             box-shadow: var(--shadow-md);
@@ -196,9 +186,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .error-message {
-            background: var(--error-bg);
-            color: var(--error);
-            border-left-color: var(--error);
+            background: var(--danger-bg);
+            color: var(--danger);
+            border-left-color: var(--danger);
         }
 
         .success-message {
@@ -232,9 +222,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: var(--brand);
+            border-color: var(--danger);
             background: white;
-            box-shadow: 0 0 0 3px rgba(15, 122, 77, 0.12);
+            box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
         }
 
         textarea {
@@ -274,13 +264,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .btn-submit {
-            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+            background: linear-gradient(135deg, var(--danger) 0%, #991b1b 100%);
             color: white;
         }
 
         .btn-submit:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(15, 122, 77, 0.28);
+            box-shadow: 0 10px 25px rgba(185, 28, 28, 0.28);
         }
 
         .btn-cancel {
@@ -313,15 +303,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <header>
     <div class="header-content">
-        <h1>💵 Adicionar Receita</h1>
+        <h1>💸 Adicionar Despesa</h1>
         <a href="dashboard.php" class="btn-back">← Voltar</a>
     </div>
 </header>
 
 <div class="container">
     <div class="form-card">
-        <h2 class="form-title">Nova Receita</h2>
-        <p class="form-subtitle">Registe uma nova receita na sua conta</p>
+        <h2 class="form-title">Nova Despesa</h2>
+        <p class="form-subtitle">Registe uma nova despesa na sua conta</p>
 
         <?php if (!empty($error)): ?>
             <div class="message error-message">
@@ -336,13 +326,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
             <div class="form-group">
-                <label for="descricao">Descrição da Receita *</label>
+                <label for="descricao">Descrição da Despesa *</label>
                 <input 
                     type="text" 
                     id="descricao" 
                     name="descricao" 
-                    placeholder="Ex: Salário do mês"
+                    placeholder="Ex: Compras no supermercado"
                     required
                     maxlength="255"
                     autofocus
@@ -369,8 +360,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select id="categoria" name="categoria" required>
                         <option value="">Escolha uma categoria</option>
                         <?php foreach ($categorias as $cat): ?>
-                            <option value="<?= htmlspecialchars($cat) ?>">
-                                <?= htmlspecialchars($cat) ?>
+                            <option value="<?= htmlspecialchars($cat['id']) ?>">
+                                <?= htmlspecialchars($cat['nome']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -378,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="data">Data da Receita *</label>
+                <label for="data">Data da Despesa *</label>
                 <input 
                     type="date" 
                     id="data" 
@@ -390,7 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="btn-group">
                 <button type="submit" class="btn btn-submit">
-                    💵 Adicionar Receita
+                    💸 Adicionar Despesa
                 </button>
                 <a href="dashboard.php" class="btn btn-cancel">Cancelar</a>
             </div>

@@ -2,100 +2,194 @@
 session_start();
 require 'config/db.php';
 
-// Verifica se o utilizador está logado
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
 
-$user_id = $_SESSION['user_id'];
-
-// Meses em português
+$user_id = (int)$_SESSION['user_id'];
 $meses = [
     1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril',
     5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto',
     9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
 ];
 
-$current_month = date('m');
-$current_year = date('Y');
-$mes_atual = $meses[(int)$current_month];
+$current_month = (int)date('m');
+$current_year = (int)date('Y');
+$mes_atual = $meses[$current_month];
 
-// ==== SALDO TOTAL ====
+$dashboardError = '';
+$metaSuccess = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_meta') {
+    $objetivo = trim($_POST['objetivo_mensal'] ?? '0');
+
+    if (!is_numeric($objetivo) || (float)$objetivo < 0) {
+        $dashboardError = 'Meta inválida.';
+    } else {
+        try {
+            $stmt = $pdo->prepare(
+                "INSERT INTO metas_poupanca (user_id, objetivo_mensal)
+                 VALUES (:user_id, :objetivo)
+                 ON DUPLICATE KEY UPDATE objetivo_mensal = VALUES(objetivo_mensal)"
+            );
+            $stmt->execute([
+                'user_id' => $user_id,
+                'objetivo' => (float)$objetivo
+            ]);
+            $metaSuccess = 'Meta mensal atualizada.';
+        } catch (PDOException $e) {
+            $dashboardError = 'Não foi possível guardar a meta.';
+        }
+    }
+}
+
+$total_receitas = 0.0;
+$total_despesas = 0.0;
+$saldo_atual = 0.0;
+$receitas_mes = 0.0;
+$despesas_mes = 0.0;
+$saldo_mes = 0.0;
+$meta_mensal = 0.0;
+$ultima_transacao = null;
+$maior_despesa_mes = null;
+$transacoes = [];
+$despesas_categoria = [];
+$evolucao_labels = [];
+$evolucao_saldos = [];
+$categorias_labels = [];
+$categorias_totais = [];
+
 try {
-    $stmt = $pdo->prepare("SELECT SUM(valor) as total FROM transacoes WHERE user_id = :user_id AND tipo = 'receita'");
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(valor),0) AS total FROM transacoes WHERE user_id = :user_id AND tipo = 'receita'");
     $stmt->execute(['user_id' => $user_id]);
-    $total_receitas = $stmt->fetch()['total'] ?? 0;
+    $total_receitas = (float)($stmt->fetch()['total'] ?? 0);
 
-    $stmt = $pdo->prepare("SELECT SUM(valor) as total FROM transacoes WHERE user_id = :user_id AND tipo = 'despesa'");
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(valor),0) AS total FROM transacoes WHERE user_id = :user_id AND tipo = 'despesa'");
     $stmt->execute(['user_id' => $user_id]);
-    $total_despesas = $stmt->fetch()['total'] ?? 0;
+    $total_despesas = (float)($stmt->fetch()['total'] ?? 0);
 
     $saldo_atual = $total_receitas - $total_despesas;
-} catch (PDOException $e) {
-    $total_receitas = 0;
-    $total_despesas = 0;
-    $saldo_atual = 0;
-}
 
-// ==== RESUMO DO MÊS ====
-try {
-    $stmt = $pdo->prepare("
-        SELECT SUM(valor) as total FROM transacoes 
-        WHERE user_id = :user_id AND tipo = 'receita' 
-        AND MONTH(data) = :month AND YEAR(data) = :year
-    ");
+    $stmt = $pdo->prepare("SELECT objetivo_mensal FROM metas_poupanca WHERE user_id = :user_id LIMIT 1");
+    $stmt->execute(['user_id' => $user_id]);
+    $meta_mensal = (float)($stmt->fetch()['objetivo_mensal'] ?? 0);
+
+    $stmt = $pdo->prepare(
+        "SELECT COALESCE(SUM(valor),0) AS total FROM transacoes
+         WHERE user_id = :user_id AND tipo = 'receita' AND MONTH(data) = :mes AND YEAR(data) = :ano"
+    );
     $stmt->execute([
         'user_id' => $user_id,
-        'month' => $current_month,
-        'year' => $current_year
+        'mes' => $current_month,
+        'ano' => $current_year
     ]);
-    $receitas_mes = $stmt->fetch()['total'] ?? 0;
+    $receitas_mes = (float)($stmt->fetch()['total'] ?? 0);
 
-    $stmt = $pdo->prepare("
-        SELECT SUM(valor) as total FROM transacoes 
-        WHERE user_id = :user_id AND tipo = 'despesa' 
-        AND MONTH(data) = :month AND YEAR(data) = :year
-    ");
+    $stmt = $pdo->prepare(
+        "SELECT COALESCE(SUM(valor),0) AS total FROM transacoes
+         WHERE user_id = :user_id AND tipo = 'despesa' AND MONTH(data) = :mes AND YEAR(data) = :ano"
+    );
     $stmt->execute([
         'user_id' => $user_id,
-        'month' => $current_month,
-        'year' => $current_year
+        'mes' => $current_month,
+        'ano' => $current_year
     ]);
-    $despesas_mes = $stmt->fetch()['total'] ?? 0;
+    $despesas_mes = (float)($stmt->fetch()['total'] ?? 0);
 
     $saldo_mes = $receitas_mes - $despesas_mes;
-} catch (PDOException $e) {
-    $receitas_mes = 0;
-    $despesas_mes = 0;
-    $saldo_mes = 0;
-}
 
-// ==== ÚLTIMAS TRANSAÇÕES ====
-try {
-    $stmt = $pdo->prepare("SELECT * FROM transacoes WHERE user_id = :user_id ORDER BY data DESC LIMIT 8");
+    $stmt = $pdo->prepare(
+        "SELECT * FROM transacoes WHERE user_id = :user_id ORDER BY data DESC, id DESC LIMIT 1"
+    );
+    $stmt->execute(['user_id' => $user_id]);
+    $ultima_transacao = $stmt->fetch();
+
+    $stmt = $pdo->prepare(
+        "SELECT * FROM transacoes
+         WHERE user_id = :user_id
+           AND tipo = 'despesa'
+           AND MONTH(data) = :mes
+           AND YEAR(data) = :ano
+         ORDER BY valor DESC, id DESC
+         LIMIT 1"
+    );
+    $stmt->execute([
+        'user_id' => $user_id,
+        'mes' => $current_month,
+        'ano' => $current_year
+    ]);
+    $maior_despesa_mes = $stmt->fetch();
+
+    $stmt = $pdo->prepare(
+        "SELECT * FROM transacoes
+         WHERE user_id = :user_id
+         ORDER BY data DESC, id DESC
+         LIMIT 8"
+    );
     $stmt->execute(['user_id' => $user_id]);
     $transacoes = $stmt->fetchAll();
-    $count_transacoes = count($transacoes);
+
+    $stmt = $pdo->prepare(
+        "SELECT COALESCE(categoria, 'Sem categoria') AS categoria, SUM(valor) AS total
+         FROM transacoes
+         WHERE user_id = :user_id
+           AND tipo = 'despesa'
+           AND MONTH(data) = :mes
+           AND YEAR(data) = :ano
+         GROUP BY COALESCE(categoria, 'Sem categoria')
+         ORDER BY total DESC"
+    );
+    $stmt->execute([
+        'user_id' => $user_id,
+        'mes' => $current_month,
+        'ano' => $current_year
+    ]);
+    $despesas_categoria = $stmt->fetchAll();
+
+    foreach ($despesas_categoria as $item) {
+        $categorias_labels[] = $item['categoria'];
+        $categorias_totais[] = (float)$item['total'];
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT DATE_FORMAT(data, '%Y-%m') AS periodo,
+                SUM(CASE WHEN tipo = 'receita' THEN valor ELSE -valor END) AS saldo_periodo
+         FROM transacoes
+         WHERE user_id = :user_id
+           AND data >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+         GROUP BY DATE_FORMAT(data, '%Y-%m')
+         ORDER BY periodo ASC"
+    );
+    $stmt->execute(['user_id' => $user_id]);
+    $linhasEvolucao = $stmt->fetchAll();
+
+    $saldoAcumulado = 0.0;
+    foreach ($linhasEvolucao as $linha) {
+        $partes = explode('-', $linha['periodo']);
+        $ano = (int)($partes[0] ?? date('Y'));
+        $mes = (int)($partes[1] ?? date('m'));
+        $evolucao_labels[] = ($meses[$mes] ?? 'Mês') . '/' . substr((string)$ano, -2);
+        $saldoAcumulado += (float)$linha['saldo_periodo'];
+        $evolucao_saldos[] = round($saldoAcumulado, 2);
+    }
 } catch (PDOException $e) {
-    $transacoes = [];
-    $count_transacoes = 0;
+    $dashboardError = 'Erro ao carregar os dados do dashboard.';
 }
 
-// ==== DESPESAS POR CATEGORIA (últimos 30 dias) ====
-try {
-    $stmt = $pdo->prepare("
-        SELECT categoria, SUM(valor) as total 
-        FROM transacoes 
-        WHERE user_id = :user_id AND tipo = 'despesa' AND data >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY categoria
-        ORDER BY total DESC
-        LIMIT 5
-    ");
-    $stmt->execute(['user_id' => $user_id]);
-    $despesas_categoria = $stmt->fetchAll();
-} catch (PDOException $e) {
-    $despesas_categoria = [];
+$meta_percent = 0;
+if ($meta_mensal > 0) {
+    $meta_percent = max(0, min(100, ($saldo_mes / $meta_mensal) * 100));
+}
+
+$alerta_excesso = $despesas_mes > $receitas_mes && $despesas_mes > 0;
+$mensagem_categoria = '';
+if (!empty($despesas_categoria) && $despesas_mes > 0) {
+    $top = $despesas_categoria[0];
+    $share = ((float)$top['total'] / $despesas_mes) * 100;
+    if ($share >= 40) {
+        $mensagem_categoria = 'Gastaste muito em ' . $top['categoria'] . ' (' . number_format((float)$top['total'], 2, ',', '.') . ' EUR).';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -104,7 +198,8 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Minhas Economias</title>
-    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="assets/css/site-enhancements.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
 
@@ -126,16 +221,11 @@ try {
             --shadow-md: 0 18px 40px rgba(31, 26, 23, 0.14);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Lexend', "Segoe UI", system-ui, -apple-system, sans-serif;
-            background: radial-gradient(circle at top, rgba(214, 162, 27, 0.12), transparent 45%),
-                        var(--gray-100);
+            background: radial-gradient(circle at top, rgba(214, 162, 27, 0.12), transparent 45%), var(--gray-100);
             color: var(--gray-800);
             min-height: 100vh;
             line-height: 1.5;
@@ -158,141 +248,87 @@ try {
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 1.5rem;
-        }
-
-        .header-left h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin: 0;
-            font-family: 'Sora', 'Lexend', sans-serif;
-        }
-
-        .header-left p {
-            font-size: 0.9rem;
-            opacity: 0.95;
-            margin-top: 0.2rem;
+            gap: 1rem;
         }
 
         nav {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
-            align-items: center;
         }
 
         nav a {
             color: white;
             text-decoration: none;
-            font-weight: 500;
-            padding: 0.6rem 1rem;
-            border-radius: 6px;
-            transition: all 0.2s;
-            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.55rem 0.85rem;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.12);
+            font-size: 0.9rem;
         }
 
-        nav a:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        nav a.btn-logout {
-            background: rgba(214, 162, 27, 0.3);
-        }
-
-        nav a.btn-logout:hover {
-            background: rgba(214, 162, 27, 0.45);
-        }
+        nav a:hover { background: rgba(255,255,255,0.24); }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 2rem 1.5rem;
+            padding: 1.6rem;
+            display: grid;
+            gap: 1.4rem;
         }
+
+        .alerts {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .alert {
+            padding: 0.9rem 1rem;
+            border-radius: 10px;
+            border: 1px solid;
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+
+        .alert-danger { color: #7f1d1d; background: #fef2f2; border-color: #fecaca; }
+        .alert-info { color: #1e3a8a; background: #eff6ff; border-color: #bfdbfe; }
+        .alert-success { color: #14532d; background: #f0fdf4; border-color: #bbf7d0; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 1.2rem;
+        }
+
+        .card .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--gray-600);
+            margin-bottom: 0.45rem;
+            font-weight: 700;
+        }
+
+        .card .value {
+            font-size: 1.7rem;
+            font-weight: 800;
+        }
+
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
 
         .layout {
             display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 1.2rem;
-        }
-
-        .sidebar-card {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            border: 1px solid var(--gray-200);
-            box-shadow: var(--shadow-sm);
-            padding: 1.2rem 1.4rem;
-        }
-
-        .sidebar-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--gray-800);
-            margin-bottom: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .sidebar-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.55rem 0;
-            border-bottom: 1px dashed var(--gray-200);
-            font-size: 0.92rem;
-            color: var(--gray-600);
-        }
-
-        .sidebar-row:last-child {
-            border-bottom: none;
-        }
-
-        .sidebar-row strong {
-            color: var(--gray-800);
-            font-weight: 700;
-        }
-
-        .sidebar-actions {
-            display: grid;
-            gap: 0.7rem;
-        }
-
-        .sidebar-actions a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.7rem 0.9rem;
-            border-radius: 10px;
-            border: 1px solid var(--gray-200);
-            text-decoration: none;
-            color: var(--gray-800);
-            font-weight: 600;
-            background: white;
-            transition: all 0.2s ease;
-        }
-
-        .sidebar-actions a:hover {
-            border-color: var(--brand);
-            color: var(--brand);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .main-area {
-            display: flex;
-            flex-direction: column;
-            gap: 1.6rem;
-        }
-
-        .panel-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.6rem;
+            grid-template-columns: 1.25fr 1fr;
+            gap: 1rem;
         }
 
         .panel {
@@ -304,504 +340,328 @@ try {
         }
 
         .panel-header {
-            padding: 1rem 1.4rem;
             background: #f3eadb;
             border-bottom: 1px solid var(--gray-200);
+            padding: 0.9rem 1.1rem;
             font-weight: 700;
-            color: var(--gray-800);
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            gap: 1rem;
+            align-items: center;
+            gap: 0.8rem;
         }
 
-        .panel-body {
-            padding: 1.2rem 1.4rem;
-        }
+        .panel-body { padding: 1rem 1.1rem; }
 
         .row-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.6rem 0;
-            border-bottom: 1px solid var(--gray-200);
+            padding: 0.55rem 0;
+            border-bottom: 1px dashed var(--gray-200);
+            font-size: 0.93rem;
         }
 
-        .row-item:last-child {
-            border-bottom: none;
-        }
+        .row-item:last-child { border-bottom: none; }
 
-        .row-item span {
-            color: var(--gray-600);
-        }
-
-        .row-item strong {
-            font-size: 1.05rem;
-        }
-
-        .panel-header .view-all {
-            color: var(--brand);
-            font-size: 0.85rem;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .section-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: var(--gray-800);
-            margin-bottom: 1.2rem;
-            font-family: 'Sora', 'Lexend', sans-serif;
-        }
-
-        .stats-grid {
+        .meta-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2.5rem;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
         }
 
-        .card {
-            background: var(--gray-50);
-            border-radius: var(--radius);
-            padding: 1.8rem;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+        .meta-form input {
             border: 1px solid var(--gray-200);
-        }
-
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-        }
-
-        .card.balance::before { background: var(--brand); }
-        .card.income::before { background: var(--success); }
-        .card.expense::before { background: var(--danger); }
-        .card.monthly::before { background: var(--info); }
-
-        .card-label {
-            font-size: 0.85rem;
-            color: var(--gray-600);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.8rem;
-            font-weight: 600;
-        }
-
-        .card-value {
-            font-size: 2.2rem;
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 0.5rem;
-        }
-
-        .card-subtitle {
-            font-size: 0.8rem;
-            color: var(--gray-600);
-        }
-
-        .positive { color: var(--success); }
-        .negative { color: var(--danger); }
-
-        /* QUICK ACTIONS */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .action-btn {
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: var(--radius);
-            padding: 1.2rem;
-            text-align: center;
-            text-decoration: none;
-            color: var(--gray-800);
-            font-weight: 600;
-            transition: all 0.2s;
-            cursor: pointer;
+            border-radius: 8px;
+            padding: 0.55rem 0.75rem;
             font-size: 0.9rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
         }
 
-        .action-btn:hover {
-            border-color: var(--brand);
-            color: var(--brand);
-            box-shadow: var(--shadow-sm);
+        .meta-form button {
+            border: none;
+            border-radius: 8px;
+            background: var(--brand);
+            color: white;
+            padding: 0.55rem 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .action-btn-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        /* CONTENT GRID */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .transactions-section, .categories-section {
-            background: white;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-sm);
+        .progress {
+            margin-top: 0.7rem;
+            height: 10px;
+            border-radius: 999px;
+            background: #f0e7d8;
             overflow: hidden;
         }
 
-        .section-header {
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--gray-200);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .progress span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(135deg, var(--brand) 0%, #19a765 100%);
         }
 
-        .section-header h2 {
-            margin: 0;
-            font-size: 1.2rem;
-            color: var(--gray-800);
-        }
-
-        .view-all {
-            color: var(--brand);
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .view-all:hover {
-            text-decoration: underline;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        tr {
-            border-bottom: 1px solid var(--gray-200);
-            transition: background 0.15s;
-        }
-
-        tr:hover {
-            background: var(--gray-50);
-        }
-
-        tr:last-child {
-            border-bottom: none;
-        }
-
-        th {
-            background: var(--gray-50);
-            padding: 1rem 2rem;
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
             text-align: left;
-            font-weight: 600;
-            color: var(--gray-600);
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        td {
-            padding: 1rem 2rem;
-        }
-
-        .tipo-receita { 
-            color: var(--success); 
-            font-weight: 600;
-            background: rgba(16, 185, 129, 0.1);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-
-        .tipo-despesa { 
-            color: var(--danger); 
-            font-weight: 600;
-            background: rgba(239, 68, 68, 0.1);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-
-        .valor {
-            font-weight: 600;
-            text-align: right;
-        }
-
-        .data {
-            color: var(--gray-600);
+            padding: 0.8rem 0.7rem;
+            border-bottom: 1px solid var(--gray-200);
             font-size: 0.9rem;
         }
-
-        .no-transactions {
-            padding: 3rem 2rem;
-            text-align: center;
+        th {
+            font-size: 0.74rem;
+            text-transform: uppercase;
             color: var(--gray-600);
+            letter-spacing: 0.06em;
+            background: var(--gray-100);
         }
 
-        /* CATEGORIES */
-        .category-item {
-            padding: 1.2rem 2rem;
-            border-bottom: 1px solid var(--gray-200);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .tipo-pill {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 0.2rem 0.55rem;
         }
 
-        .category-item:last-child {
-            border-bottom: none;
+        .tipo-receita { color: #14532d; background: #dcfce7; }
+        .tipo-despesa { color: #7f1d1d; background: #fee2e2; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
-        .category-name {
-            font-weight: 500;
-            color: var(--gray-800);
+        .chart-wrap {
+            min-height: 260px;
         }
 
-        .category-amount {
-            font-weight: 600;
-            color: var(--danger);
+        @media (max-width: 1080px) {
+            .layout { grid-template-columns: 1fr; }
+            .charts-grid { grid-template-columns: 1fr; }
         }
 
-        /* RESPONSIVE */
-        @media (max-width: 1024px) {
-            .layout {
-                grid-template-columns: 1fr;
-            }
-
-            .panel-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            nav {
-                gap: 0.3rem;
-            }
-
-            nav a {
-                padding: 0.5rem 0.8rem;
-                font-size: 0.85rem;
-            }
-
-            th, td {
-                padding: 0.8rem 1rem;
-                font-size: 0.9rem;
-            }
-
-            .panel-header {
-                padding: 0.9rem 1.1rem;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 1rem;
-            }
-
-            th, td {
-                padding: 0.7rem 0.8rem;
-            }
-
-            .panel-body {
-                padding: 1rem 1.1rem;
-            }
+        @media (max-width: 720px) {
+            nav { width: 100%; }
+            nav a { flex: 1 1 auto; text-align: center; }
+            .meta-form { grid-template-columns: 1fr; }
+            th, td { font-size: 0.84rem; }
         }
     </style>
 </head>
 <body>
-
 <header>
     <div class="header-content">
-        <div class="header-left">
-            <h1>💰 Minhas Economias</h1>
+        <div>
+            <h1>Minhas Economias</h1>
             <p>Bem-vindo, <strong><?= htmlspecialchars($_SESSION['username']) ?></strong></p>
         </div>
         <nav>
-            <a href="dashboard.php">📊 Dashboard</a>
-            <a href="adicionar_receitas.php">➕ Receita</a>
-            <a href="adicionar_despesa.php">➖ Despesa</a>
-            <a href="logout.php" class="btn-logout">🚪 Sair</a>
+            <a href="dashboard.php">Dashboard</a>
+            <a href="transacoes.php">Transações</a>
+            <a href="categorias.php">Categorias</a>
+            <a href="adicionar_receitas.php">Nova Receita</a>
+            <a href="adicionar_despesa.php">Nova Despesa</a>
+            <a href="logout.php">Sair</a>
         </nav>
     </div>
 </header>
 
 <div class="container">
-    <div class="layout">
-        <aside class="sidebar">
-            <div class="sidebar-card">
-                <div class="sidebar-title">Contas</div>
-                <div class="sidebar-row">
-                    <span>Saldo atual</span>
-                    <strong class="<?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
-                        <?= number_format($saldo_atual, 2, ',', '.') ?> €
-                    </strong>
-                </div>
-                <div class="sidebar-row">
-                    <span>Entradas</span>
-                    <strong class="positive"><?= number_format($total_receitas, 2, ',', '.') ?> €</strong>
-                </div>
-                <div class="sidebar-row">
-                    <span>Saídas</span>
-                    <strong class="negative"><?= number_format($total_despesas, 2, ',', '.') ?> €</strong>
-                </div>
-            </div>
+    <?php if ($dashboardError !== ''): ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($dashboardError) ?></div>
+    <?php endif; ?>
 
-            <div class="sidebar-card">
-                <div class="sidebar-title">Ações rápidas</div>
-                <div class="sidebar-actions">
-                    <a href="adicionar_receitas.php">➕ Adicionar receita</a>
-                    <a href="adicionar_despesa.php">➖ Adicionar despesa</a>
-                    <a href="relatorios.php">📈 Ver relatórios</a>
-                </div>
-            </div>
+    <?php if ($metaSuccess !== ''): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($metaSuccess) ?></div>
+    <?php endif; ?>
 
-            <div class="sidebar-card">
-                <div class="sidebar-title">Resumo do mês</div>
-                <div class="sidebar-row">
-                    <span>Entradas</span>
-                    <strong class="positive"><?= number_format($receitas_mes, 2, ',', '.') ?> €</strong>
-                </div>
-                <div class="sidebar-row">
-                    <span>Saídas</span>
-                    <strong class="negative"><?= number_format($despesas_mes, 2, ',', '.') ?> €</strong>
-                </div>
-                <div class="sidebar-row">
-                    <span>Saldo</span>
-                    <strong class="<?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
-                        <?= number_format($saldo_mes, 2, ',', '.') ?> €
-                    </strong>
-                </div>
-            </div>
-        </aside>
+    <section class="alerts">
+        <?php if ($alerta_excesso): ?>
+            <div class="alert alert-danger">Aviso: este mês as despesas estão acima das receitas.</div>
+        <?php endif; ?>
 
-        <main class="main-area">
-            <div class="panel-grid">
-                <section class="panel">
-                    <div class="panel-header">Entradas e saídas</div>
-                    <div class="panel-body">
-                        <div class="row-item">
-                            <span>Total de entradas</span>
-                            <strong class="positive"><?= number_format($total_receitas, 2, ',', '.') ?> €</strong>
-                        </div>
-                        <div class="row-item">
-                            <span>Total de saídas</span>
-                            <strong class="negative"><?= number_format($total_despesas, 2, ',', '.') ?> €</strong>
-                        </div>
-                        <div class="row-item">
-                            <span>Saldo total</span>
-                            <strong class="<?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>">
-                                <?= number_format($saldo_atual, 2, ',', '.') ?> €
-                            </strong>
-                        </div>
-                    </div>
-                </section>
+        <?php if ($mensagem_categoria !== ''): ?>
+            <div class="alert alert-info"><?= htmlspecialchars($mensagem_categoria) ?></div>
+        <?php endif; ?>
+    </section>
 
-                <section class="panel">
-                    <div class="panel-header">Este mês (<?= $mes_atual ?>)</div>
-                    <div class="panel-body">
-                        <div class="row-item">
-                            <span>Entradas do mês</span>
-                            <strong class="positive"><?= number_format($receitas_mes, 2, ',', '.') ?> €</strong>
-                        </div>
-                        <div class="row-item">
-                            <span>Saídas do mês</span>
-                            <strong class="negative"><?= number_format($despesas_mes, 2, ',', '.') ?> €</strong>
-                        </div>
-                        <div class="row-item">
-                            <span>Saldo do mês</span>
-                            <strong class="<?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>">
-                                <?= number_format($saldo_mes, 2, ',', '.') ?> €
-                            </strong>
-                        </div>
-                    </div>
-                </section>
-            </div>
+    <section class="stats-grid">
+        <article class="card">
+            <div class="label">Saldo atual</div>
+            <div class="value <?= $saldo_atual >= 0 ? 'positive' : 'negative' ?>"><?= number_format($saldo_atual, 2, ',', '.') ?> EUR</div>
+        </article>
+        <article class="card">
+            <div class="label">Total ganho</div>
+            <div class="value positive"><?= number_format($total_receitas, 2, ',', '.') ?> EUR</div>
+        </article>
+        <article class="card">
+            <div class="label">Total gasto</div>
+            <div class="value negative"><?= number_format($total_despesas, 2, ',', '.') ?> EUR</div>
+        </article>
+        <article class="card">
+            <div class="label">Resumo do mês</div>
+            <div class="value <?= $saldo_mes >= 0 ? 'positive' : 'negative' ?>"><?= number_format($saldo_mes, 2, ',', '.') ?> EUR</div>
+            <small><?= number_format($receitas_mes, 2, ',', '.') ?> ganho vs <?= number_format($despesas_mes, 2, ',', '.') ?> gasto</small>
+        </article>
+    </section>
 
-            <section class="panel">
-                <div class="panel-header">
-                    <span>Transações recentes</span>
-                    <a href="transacoes.php" class="view-all">Ver todas →</a>
-                </div>
-                <?php if ($count_transacoes > 0): ?>
+    <section class="layout">
+        <article class="panel">
+            <div class="panel-header">Últimas transações</div>
+            <div class="panel-body" style="padding:0;">
+                <?php if (!empty($transacoes)): ?>
                     <table>
                         <thead>
                             <tr>
                                 <th>Data</th>
-                                <th>Descrição</th>
                                 <th>Tipo</th>
-                                <th class="valor">Valor</th>
+                                <th>Categoria</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach($transacoes as $t): ?>
+                            <?php foreach ($transacoes as $t): ?>
                                 <tr>
-                                    <td class="data"><?= date('d/m/Y', strtotime($t['data'])) ?></td>
-                                    <td><?= htmlspecialchars(substr($t['descricao'], 0, 30)) ?></td>
+                                    <td><?= date('d/m/Y', strtotime($t['data'])) ?></td>
                                     <td>
-                                        <span class="<?= $t['tipo'] === 'receita' ? 'tipo-receita' : 'tipo-despesa' ?>">
+                                        <span class="tipo-pill <?= $t['tipo'] === 'receita' ? 'tipo-receita' : 'tipo-despesa' ?>">
                                             <?= ucfirst($t['tipo']) ?>
                                         </span>
                                     </td>
-                                    <td class="valor <?= $t['tipo'] === 'receita' ? 'positive' : 'negative' ?>">
-                                        <?= ($t['tipo'] === 'receita' ? '+' : '-') . number_format($t['valor'], 2, ',', '.') ?> €
+                                    <td><?= htmlspecialchars($t['categoria'] ?? 'Sem categoria') ?></td>
+                                    <td><?= htmlspecialchars($t['descricao']) ?></td>
+                                    <td class="<?= $t['tipo'] === 'receita' ? 'positive' : 'negative' ?>">
+                                        <?= ($t['tipo'] === 'receita' ? '+' : '-') . number_format((float)$t['valor'], 2, ',', '.') ?> EUR
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 <?php else: ?>
-                    <div class="no-transactions">
-                        <p>📭 Nenhuma transação registrada ainda.</p>
-                        <p>Comece a adicionar receitas e despesas!</p>
-                    </div>
+                    <div style="padding: 1rem;">Sem transações ainda.</div>
                 <?php endif; ?>
-            </section>
+            </div>
+        </article>
 
-            <section class="panel">
-                <div class="panel-header">Despesas por categoria</div>
-                <?php if (!empty($despesas_categoria)): ?>
-                    <?php foreach($despesas_categoria as $cat): ?>
-                        <div class="category-item">
-                            <span class="category-name"><?= htmlspecialchars($cat['categoria']) ?></span>
-                            <span class="category-amount"><?= number_format($cat['total'], 2, ',', '.') ?> €</span>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div style="padding: 2rem; text-align: center; color: var(--gray-600);">
-                        <p>📊 Sem dados de despesas</p>
-                    </div>
-                <?php endif; ?>
-            </section>
-        </main>
-    </div>
+        <article class="panel">
+            <div class="panel-header">Destaques do mês (<?= $mes_atual ?>)</div>
+            <div class="panel-body">
+                <div class="row-item">
+                    <span>Última transação</span>
+                    <strong>
+                        <?php if ($ultima_transacao): ?>
+                            <?= htmlspecialchars($ultima_transacao['descricao']) ?> (<?= number_format((float)$ultima_transacao['valor'], 2, ',', '.') ?> EUR)
+                        <?php else: ?>
+                            Sem dados
+                        <?php endif; ?>
+                    </strong>
+                </div>
+                <div class="row-item">
+                    <span>Maior despesa do mês</span>
+                    <strong class="negative">
+                        <?php if ($maior_despesa_mes): ?>
+                            <?= htmlspecialchars($maior_despesa_mes['descricao']) ?> (<?= number_format((float)$maior_despesa_mes['valor'], 2, ',', '.') ?> EUR)
+                        <?php else: ?>
+                            Sem despesas no mês
+                        <?php endif; ?>
+                    </strong>
+                </div>
+                <div class="row-item">
+                    <span>Meta de poupança</span>
+                    <strong><?= number_format($meta_mensal, 2, ',', '.') ?> EUR</strong>
+                </div>
+                <div class="progress">
+                    <span style="width: <?= number_format($meta_percent, 2, '.', '') ?>%;"></span>
+                </div>
+                <small style="display:block; margin-top:0.4rem; color: var(--gray-600);">
+                    <?= number_format($meta_percent, 1, ',', '.') ?>% da meta atingida neste mês
+                </small>
+
+                <form method="post" class="meta-form">
+                    <input type="hidden" name="action" value="save_meta">
+                    <input type="number" step="0.01" min="0" name="objetivo_mensal" value="<?= number_format($meta_mensal, 2, '.', '') ?>" placeholder="Definir meta mensal">
+                    <button type="submit">Guardar meta</button>
+                </form>
+            </div>
+        </article>
+    </section>
+
+    <section class="charts-grid">
+        <article class="panel">
+            <div class="panel-header">Gráfico de despesas por categoria</div>
+            <div class="panel-body chart-wrap">
+                <canvas id="chartCategorias"></canvas>
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-header">Evolução do saldo</div>
+            <div class="panel-body chart-wrap">
+                <canvas id="chartSaldo"></canvas>
+            </div>
+        </article>
+    </section>
 </div>
 
+<script>
+const categoriasLabels = <?= json_encode($categorias_labels, JSON_UNESCAPED_UNICODE) ?>;
+const categoriasValores = <?= json_encode($categorias_totais) ?>;
+const evolucaoLabels = <?= json_encode($evolucao_labels, JSON_UNESCAPED_UNICODE) ?>;
+const evolucaoSaldos = <?= json_encode($evolucao_saldos) ?>;
+
+const pieCtx = document.getElementById('chartCategorias');
+if (pieCtx) {
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoriasLabels.length ? categoriasLabels : ['Sem dados'],
+            datasets: [{
+                data: categoriasValores.length ? categoriasValores : [1],
+                backgroundColor: ['#b91c1c', '#c27803', '#0f7a4d', '#2563eb', '#d97706', '#0f766e', '#be185d', '#334155']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+const lineCtx = document.getElementById('chartSaldo');
+if (lineCtx) {
+    new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: evolucaoLabels.length ? evolucaoLabels : ['Sem dados'],
+            datasets: [{
+                label: 'Saldo acumulado',
+                data: evolucaoSaldos.length ? evolucaoSaldos : [0],
+                borderColor: '#0f7a4d',
+                backgroundColor: 'rgba(15, 122, 77, 0.15)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.25
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) { return value + ' EUR'; }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
 </body>
 </html>

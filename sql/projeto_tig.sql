@@ -32,6 +32,8 @@ CREATE TABLE `categorias` (
   `nome` varchar(100) NOT NULL,
   `tipo` enum('receita','despesa') NOT NULL,
   `descricao` varchar(255) DEFAULT NULL,
+  `user_id` int DEFAULT NULL,
+  `ativa` tinyint(1) NOT NULL DEFAULT '1',
   `criada_em` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -89,8 +91,23 @@ CREATE TABLE `transacoes` (
   `user_id` int NOT NULL,
   `descricao` varchar(255) NOT NULL,
   `tipo` enum('receita','despesa') NOT NULL,
+  `categoria` varchar(100) DEFAULT NULL,
   `valor` decimal(10,2) NOT NULL,
   `data` date NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `metas_poupanca`
+--
+
+CREATE TABLE `metas_poupanca` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `objetivo_mensal` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `criado_em` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -125,7 +142,8 @@ INSERT INTO `utilizadores` (`id`, `username`, `password`, `criado_em`) VALUES
 --
 ALTER TABLE `categorias`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `nome` (`nome`);
+  ADD UNIQUE KEY `uniq_categoria_user_tipo` (`user_id`,`nome`,`tipo`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Índices para tabela `despesas`
@@ -154,6 +172,13 @@ ALTER TABLE `saldo`
 ALTER TABLE `transacoes`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`);
+
+--
+-- Índices para tabela `metas_poupanca`
+--
+ALTER TABLE `metas_poupanca`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_user` (`user_id`);
 
 --
 -- Índices para tabela `utilizadores`
@@ -197,6 +222,12 @@ ALTER TABLE `transacoes`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de tabela `metas_poupanca`
+--
+ALTER TABLE `metas_poupanca`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `utilizadores`
 --
 ALTER TABLE `utilizadores`
@@ -229,6 +260,18 @@ ALTER TABLE `saldo`
 --
 ALTER TABLE `transacoes`
   ADD CONSTRAINT `transacoes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `utilizadores` (`id`);
+
+--
+-- Limitadores para a tabela `categorias`
+--
+ALTER TABLE `categorias`
+  ADD CONSTRAINT `categorias_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `utilizadores` (`id`) ON DELETE CASCADE;
+
+--
+-- Limitadores para a tabela `metas_poupanca`
+--
+ALTER TABLE `metas_poupanca`
+  ADD CONSTRAINT `metas_poupanca_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `utilizadores` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

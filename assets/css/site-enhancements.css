@@ -1,0 +1,86 @@
+/* Camada global de refinamento visual para todas as telas */
+:root {
+    --global-bg-soft: radial-gradient(circle at 6% -10%, rgba(214, 162, 27, 0.14), transparent 40%),
+                     radial-gradient(circle at 92% 0%, rgba(15, 122, 77, 0.09), transparent 35%);
+    --global-focus: rgba(37, 99, 235, 0.28);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-attachment: fixed;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: var(--global-bg-soft);
+    z-index: -1;
+}
+
+header {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+a,
+button,
+input,
+select,
+textarea {
+    transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+button:hover,
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid var(--global-focus);
+    outline-offset: 2px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+}
+
+table {
+    min-width: 680px;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+@media (max-width: 900px) {
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    nav {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
